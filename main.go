@@ -7,9 +7,13 @@ import (
   "log"
   "time"
   "strconv"
+  "embed"
   )
 
 var REPO *ResourceRepo
+
+//go:embed public/*
+var public embed.FS
 
 func main() {
   REPO = NewResourceRepo()
@@ -18,6 +22,7 @@ func main() {
   r.HandleFunc("/", HomeHandler)
   r.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
   r.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
+  r.PathPrefix("/public/").Handler(http.FileServer(http.FS(public)))
 
   srv := &http.Server{
     Handler: r,

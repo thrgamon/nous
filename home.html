@@ -1,3 +1,12 @@
-{{range .}}
-<a href="{{.Link}}"/>{{.Name}}</a> | <a href="/up/{{.ID}}">UP</a> {{.Rank}} <a href="/down/{{.ID}}">DOWN</a>
-{{end}}
+<html>
+<head>
+    <link rel="stylesheet" href="public/main.css">
+</head> 
+<body>
+    <ul>
+  {{range .}}
+      <li><a href="{{.Link}}"/>{{.Name}}</a> | <a href="/up/{{.ID}}">UP</a> {{.Rank}} <a href="/down/{{.ID}}">DOWN</a></li>
+  {{end}}
+      </ul>
+</body>
+</html>
