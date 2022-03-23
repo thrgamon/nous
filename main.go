@@ -1,22 +1,34 @@
 package main
 
 import (
-  "github.com/gorilla/mux"
-  "net/http"
-  "html/template"
-  "log"
-  "time"
-  "strconv"
-  "embed"
-  )
+	"embed"
+	"html/template"
+	"io/fs"
+	"log"
+	"net/http"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+)
 
 var REPO *ResourceRepo
+
+var Templates map[string]*template.Template
 
 //go:embed public/*
 var public embed.FS
 
+//go:embed views/*
+var views embed.FS
+
 func main() {
   REPO = NewResourceRepo()
+  cacheTemplates()
 
   r := mux.NewRouter()
   r.HandleFunc("/", HomeHandler)
@@ -25,7 +37,7 @@ func main() {
   r.PathPrefix("/public/").Handler(http.FileServer(http.FS(public)))
 
   srv := &http.Server{
-    Handler: r,
+    Handler: handlers.CombinedLoggingHandler(os.Stdout, r),
     Addr:    "127.0.0.1:8080",
     WriteTimeout: 15 * time.Second,
     ReadTimeout:  15 * time.Second,
@@ -35,7 +47,7 @@ func main() {
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-  RenderTemplate(w, "home.html", REPO.storage)
+  RenderTemplate(w, "home", REPO.storage)
 }
 
 func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,10 +65,41 @@ func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
-  t := template.Must(template.ParseFiles(tmpl))
-	err := t.Execute(w, data)
+	err := Templates[tmpl].Execute(w, data)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func cacheTemplates() {
+  re := regexp.MustCompile(`^[a-zA-Z\/]*\.html`)
+	templates := make(map[string]*template.Template)
+	// Walk the template directory and parse all templates that aren't fragments
+	err := fs.WalkDir(views, ".",
+		func(path string, info fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if re.MatchString(path) {
+				normalisedPath := strings.TrimSuffix(strings.TrimPrefix(path, "views/"), ".html")
+				templates[normalisedPath] = template.Must(
+					template.ParseFS(
+						views,
+						path,
+					),
+				)
+			}
+
+			return nil
+		})
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	// Assign to global variable so we can access it when rendering templates
+	Templates = templates
+
 }
