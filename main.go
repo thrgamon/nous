@@ -38,7 +38,7 @@ func main() {
 
   srv := &http.Server{
     Handler: handlers.CombinedLoggingHandler(os.Stdout, r),
-    Addr:    "0.0.0.0:8080",
+    Addr:    "0.0.0.0:5000",
     WriteTimeout: 15 * time.Second,
     ReadTimeout:  15 * time.Second,
   }
