@@ -1,8 +1,8 @@
-// +heroku goVersion go1.16
+// +heroku goVersion go1.18
 
 module learning_rank
 
-go 1.16
+go 1.18
 
 require (
 	github.com/gorilla/handlers v1.5.1
