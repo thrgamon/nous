@@ -39,11 +39,11 @@ func main() {
 
   srv := &http.Server{
     Handler: handlers.CombinedLoggingHandler(os.Stdout, r),
-    Addr:    "0.0.0.0:5000",
+    Addr:    "0.0.0.0:" + env.GetEnvWithFallback("PORT", "8080"),
     WriteTimeout: 15 * time.Second,
     ReadTimeout:  15 * time.Second,
   }
-
+  println("Server listening")
 	log.Fatal(srv.ListenAndServe())
 }
 
