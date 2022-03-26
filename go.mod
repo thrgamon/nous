@@ -1,6 +1,6 @@
 // +heroku goVersion go1.18
 
-module learning_rank
+module github.com/thrgamon/learning_rank
 
 go 1.18
 
