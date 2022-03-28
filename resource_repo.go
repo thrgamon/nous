@@ -1,5 +1,11 @@
 package main
 
+import (
+	"context"
+
+	"github.com/jackc/pgx/v4/pgxpool"
+)
+
 type Resource struct {
   ID uint
   Link string
@@ -9,32 +15,65 @@ type Resource struct {
 
 type ResourceRepo struct {
   storage map[uint]Resource
+  db *pgxpool.Pool
 }
 
-func NewResourceRepo() *ResourceRepo{
-  r1 := Resource{Link: "https://hello.com", Name: "Hello is Cool", Rank: 5, ID: 1}
-  r2 := Resource{Link: "https://tomgamon.com", Name: "Wow so nice", Rank: 5, ID: 2}
+func NewResourceRepo(db *pgxpool.Pool) *ResourceRepo{
   var repo ResourceRepo
   repo.storage = make(map[uint]Resource)
-  repo.storage[1] = r1
-  repo.storage[2] = r2
+  repo.db = db
   return &repo
 }
 
-func (rr ResourceRepo) Get(id uint) Resource{
-  return rr.storage[id]
+func (rr ResourceRepo) Get(id uint) (error, Resource){
+  var link string
+  var name string
+  var rank int
+  err := rr.db.QueryRow(context.TODO(), "select link, name, rank from resources where resources.id = $1", id).Scan(&link, &name, &rank)
+
+  if err != nil {
+    return err, Resource{}
+  }
+
+  resource := Resource{ID: id, Link: link, Name: name, Rank: rank}
+
+  return nil, resource
 }
 
-func (rr ResourceRepo) Upvote(id uint) Resource{
-  resource := rr.storage[id]
-  resource.Rank = resource.Rank + 1
-  rr.storage[id] = resource
-  return rr.storage[id]
+func (rr ResourceRepo) GetAll(ctx context.Context) ([]Resource, error){
+  var resources []Resource
+
+  rows, err := rr.db.Query(ctx, "select id, link, name, rank from resources")
+  defer rows.Close()
+
+  if err != nil {
+    return resources, err
+  }
+
+  for rows.Next() {
+    var id int
+    var link string
+    var name string
+    var rank int
+    rows.Scan(&id, &link, &name, &rank)
+    resources = append(resources, Resource{ID: uint(id), Link: link, Name: name, Rank: rank})
+  }
+
+  if err != nil {
+    return resources, err
+  }
+
+  return resources, nil
 }
 
-func (rr ResourceRepo) Downvote(id uint) Resource{
-  resource := rr.storage[id]
-  resource.Rank = resource.Rank - 1
-  rr.storage[id] = resource
-  return rr.storage[id]
+func (rr ResourceRepo) Upvote(ctx context.Context, id uint) error {
+  _, err := rr.db.Exec(ctx, "UPDATE resources SET rank = rank + 1 WHERE id = $1", id)
+
+  return err
+}
+
+func (rr ResourceRepo) Downvote(ctx context.Context,id uint) error{
+  _, err := rr.db.Exec(ctx, "UPDATE resources SET rank = rank - 1 WHERE id = $1", id)
+
+  return err
 }

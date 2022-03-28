@@ -11,13 +11,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
-  "github.com/thrgamon/learning_rank/env"
+
+	"github.com/thrgamon/learning_rank/env"
+
+	"context"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 var REPO *ResourceRepo
+var DB *pgxpool.Pool
 
 var Templates map[string]*template.Template
 
@@ -28,7 +33,10 @@ var public embed.FS
 var views embed.FS
 
 func main() {
-  REPO = NewResourceRepo()
+  DB = initDB()
+  defer DB.Close()
+
+  REPO = NewResourceRepo(DB)
   cacheTemplates()
 
   r := mux.NewRouter()
@@ -48,20 +56,36 @@ func main() {
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-  RenderTemplate(w, "home", REPO.storage)
+  resources, err := REPO.GetAll(r.Context())
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+  RenderTemplate(w, "home", resources)
 }
 
 func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
   vars := mux.Vars(r)
   resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-  REPO.Upvote(uint(resourceId))
+  err := REPO.Upvote(r.Context(), uint(resourceId))
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
   http.Redirect(w, r, "/", 303)
 }
 
 func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
   vars := mux.Vars(r)
   resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-  REPO.Downvote(uint(resourceId))
+  err := REPO.Downvote(r.Context(), uint(resourceId))
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
   http.Redirect(w, r, "/", 303)
 }
 
@@ -103,4 +127,14 @@ func cacheTemplates() {
 	// Assign to global variable so we can access it when rendering templates
 	Templates = templates
 
+}
+
+func initDB() *pgxpool.Pool{
+  conn, err := pgxpool.Connect(context.TODO(), os.Getenv("DATABASE_URL"))
+
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  return conn
 }
