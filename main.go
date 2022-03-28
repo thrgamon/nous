@@ -43,7 +43,7 @@ func main() {
   r.HandleFunc("/", HomeHandler)
   r.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
   r.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
-  r.PathPrefix("/public/").Handler(http.FileServer(http.FS(public)))
+  r.PathPrefix("/public/").Handler(cacher(http.FileServer(http.FS(public))))
 
   srv := &http.Server{
     Handler: handlers.CombinedLoggingHandler(os.Stdout, r),
@@ -53,6 +53,13 @@ func main() {
   }
   println("Server listening")
 	log.Fatal(srv.ListenAndServe())
+}
+
+func cacher(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Cache-Control", "max-age=60000, public")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
