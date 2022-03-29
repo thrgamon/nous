@@ -43,7 +43,7 @@ func (rr ResourceRepo) Get(id uint) (error, Resource){
 func (rr ResourceRepo) GetAll(ctx context.Context) ([]Resource, error){
   var resources []Resource
 
-  rows, err := rr.db.Query(ctx, "select id, link, name, rank from resources")
+  rows, err := rr.db.Query(ctx, "SELECT id, link, name, rank FROM resources ORDER BY rank DESC")
   defer rows.Close()
 
   if err != nil {
@@ -64,6 +64,12 @@ func (rr ResourceRepo) GetAll(ctx context.Context) ([]Resource, error){
   }
 
   return resources, nil
+}
+
+func (rr ResourceRepo) Add(ctx context.Context, link string, name string) error {
+  _, err := rr.db.Exec(ctx, "INSERT INTO resources (name, link, rank) VALUES ($1, $2, $3)", name, link, 0)
+
+  return err
 }
 
 func (rr ResourceRepo) Upvote(ctx context.Context, id uint) error {

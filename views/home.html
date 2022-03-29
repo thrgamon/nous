@@ -3,6 +3,11 @@
     <link rel="stylesheet" href="public/main.css">
 </head> 
 <body>
+    <form action="/resource" method="post">
+      <input type="url" name="link">
+      <input type="text" name="name">
+      <input type="submit" value="Submit">
+    </form>
     <ul>
   {{range .}}
       <li><a href="{{.Link}}"/>{{.Name}}</a> | <a href="/down/{{.ID}}">DOWN</a> {{.Rank}} <a href="/up/{{.ID}}">UP</a></li>

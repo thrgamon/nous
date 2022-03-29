@@ -41,6 +41,7 @@ func main() {
 
   r := mux.NewRouter()
   r.HandleFunc("/", HomeHandler)
+  r.HandleFunc("/resource", AddResourceHandler)
   r.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
   r.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
   r.PathPrefix("/public/").Handler(cacher(http.FileServer(http.FS(public))))
@@ -76,6 +77,21 @@ func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
   vars := mux.Vars(r)
   resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
   err := REPO.Upvote(r.Context(), uint(resourceId))
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+  http.Redirect(w, r, "/", 303)
+}
+
+func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
+  r.ParseForm()
+
+	name := r.FormValue("name")
+	link := r.FormValue("link")
+
+  err := REPO.Add(r.Context(), link, name)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
