@@ -5,7 +5,7 @@
 <body>
     <ul>
   {{range .}}
-      <li><a href="{{.Link}}"/>{{.Name}}</a> | <a href="/up/{{.ID}}">UP</a> {{.Rank}} <a href="/down/{{.ID}}">DOWN</a></li>
+      <li><a href="{{.Link}}"/>{{.Name}}</a> | <a href="/down/{{.ID}}">DOWN</a> {{.Rank}} <a href="/up/{{.ID}}">UP</a></li>
   {{end}}
       </ul>
 </body>
