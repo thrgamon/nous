@@ -4,6 +4,7 @@ import (
 	"embed"
 	"html/template"
 	"io/fs"
+  "fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+  "path/filepath"
 
 	"github.com/thrgamon/learning_rank/env"
 
@@ -25,9 +27,6 @@ var REPO *ResourceRepo
 var DB *pgxpool.Pool
 
 var Templates map[string]*template.Template
-
-//go:embed public/*
-var public embed.FS
 
 //go:embed views/*
 var views embed.FS
@@ -44,7 +43,7 @@ func main() {
   r.HandleFunc("/resource", AddResourceHandler)
   r.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
   r.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
-  r.PathPrefix("/public/").Handler(cacher(http.FileServer(http.FS(public))))
+  r.PathPrefix("/public/").HandlerFunc(serveResource)
 
   srv := &http.Server{
     Handler: handlers.CombinedLoggingHandler(os.Stdout, r),
@@ -61,6 +60,24 @@ func cacher(next http.Handler) http.Handler {
     w.Header().Set("Cache-Control", "max-age=60000, public")
 		next.ServeHTTP(w, r)
 	})
+}
+
+func serveResource(w http.ResponseWriter, r *http.Request) {
+	f, err := os.Open(filepath.Join(".", r.URL.Path))
+	if err != nil {
+		http.Error(w, r.RequestURI, http.StatusNotFound)
+		return
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		http.Error(w, r.RequestURI, http.StatusNotFound)
+		return
+	}
+	modTime := fi.ModTime()
+
+	http.ServeContent(w, r, r.URL.Path, modTime, f)
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
