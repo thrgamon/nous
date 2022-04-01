@@ -1,29 +1,37 @@
 package main
 
 import (
+	"crypto/rand"
 	"embed"
+	"encoding/base64"
 	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-  "path/filepath"
 
+	"github.com/thrgamon/learning_rank/authentication"
 	"github.com/thrgamon/learning_rank/env"
+	"github.com/thrgamon/learning_rank/repo"
 
 	"context"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 var REPO *ResourceRepo
+var USER_REPO *repo.UserRepo
 var DB *pgxpool.Pool
+var STORE *sessions.CookieStore 
+var AUTH *authentication.Authenticator
 
 var Templates map[string]*template.Template
 
@@ -35,9 +43,21 @@ func main() {
   defer DB.Close()
 
   REPO = NewResourceRepo(DB)
+  USER_REPO = repo.NewUserRepo(DB)
   cacheTemplates()
 
+  STORE = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+
+  authenticator, _ := authentication.New()
+
+  AUTH = authenticator
+  authentication.Auth = AUTH
+  authentication.Store = STORE
+  authentication.Repo = USER_REPO
+
   r := mux.NewRouter()
+  r.HandleFunc("/login", LoginHandler)
+  r.HandleFunc("/callback", authentication.CallbackHandler)
   r.HandleFunc("/", HomeHandler)
   r.HandleFunc("/resource", AddResourceHandler)
   r.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
@@ -126,6 +146,42 @@ func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
   http.Redirect(w, r, "/", 303)
+}
+
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+  state, err := generateRandomState()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+	}
+
+  session, err := STORE.Get(r, "auth") 
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+	}
+
+  session.Values["state"] = state
+
+  error := session.Save(r, w)
+	if error != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
+	}
+
+  http.Redirect(w, r, AUTH.AuthCodeURL(state), http.StatusTemporaryRedirect)
+}
+
+func generateRandomState() (string, error) {
+  b := make([]byte, 32)
+  _, err := rand.Read(b)
+  if err != nil {
+    return "", err
+  }
+
+  state := base64.StdEncoding.EncodeToString(b)
+
+  return state, nil
 }
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
