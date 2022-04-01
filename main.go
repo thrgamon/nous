@@ -55,8 +55,10 @@ func main() {
   authentication.Store = STORE
   authentication.Repo = USER_REPO
 
+
   r := mux.NewRouter()
   r.HandleFunc("/login", LoginHandler)
+  r.HandleFunc("/logout", authentication.Logout)
   r.HandleFunc("/callback", authentication.CallbackHandler)
   r.HandleFunc("/", HomeHandler)
   r.HandleFunc("/resource", AddResourceHandler)
@@ -100,6 +102,7 @@ func serveResource(w http.ResponseWriter, r *http.Request) {
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
+  STORE.Get(r, "auth")
   resources, err := REPO.GetAll(r.Context())
 
 	if err != nil {
