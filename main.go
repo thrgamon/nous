@@ -76,13 +76,6 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func cacher(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    w.Header().Set("Cache-Control", "max-age=60000, public")
-		next.ServeHTTP(w, r)
-	})
-}
-
 func serveResource(w http.ResponseWriter, r *http.Request) {
 	f, err := os.Open(filepath.Join(".", r.URL.Path))
 	if err != nil {
