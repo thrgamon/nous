@@ -3,8 +3,12 @@
     <link rel="stylesheet" href="public/main.css">
 </head> 
 <body>
+      {{ if not .User.Username }}
     <a href="/login">SignIn</a>
+      {{else}}
+    {{.User.Username}}
     <a href="/logout">LogOut</a>
+      {{end}}
     <form action="/resource" method="post">
       <label for="link">Link</label>
       <input type="url" name="link">
@@ -13,7 +17,7 @@
       <input type="submit" value="Submit">
     </form>
     <ul>
-  {{range .}}
+  {{range .Resources}}
       <li><a href="{{.Link}}"/>{{.Name}}</a> | <a href="/down/{{.ID}}">DOWN</a> {{.Rank}} <a href="/up/{{.ID}}">UP</a></li>
   {{end}}
       </ul>

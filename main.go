@@ -76,33 +76,29 @@ func main() {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func serveResource(w http.ResponseWriter, r *http.Request) {
-	f, err := os.Open(filepath.Join(".", r.URL.Path))
-	if err != nil {
-		http.Error(w, r.RequestURI, http.StatusNotFound)
-		return
-	}
-	defer f.Close()
-
-	fi, err := f.Stat()
-	if err != nil {
-		http.Error(w, r.RequestURI, http.StatusNotFound)
-		return
-	}
-	modTime := fi.ModTime()
-
-	http.ServeContent(w, r, r.URL.Path, modTime, f)
+type PageData struct {
+  User repo.User
+  Resources []Resource
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-  STORE.Get(r, "auth")
+  sessionState, _ := STORE.Get(r, "auth")
   resources, err := REPO.GetAll(r.Context())
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-  RenderTemplate(w, "home", resources)
+  var pageData PageData
+  userId, ok := sessionState.Values["user_id"].(string)
+  if ok {
+    _, user := USER_REPO.Get(r.Context(), userId)
+    pageData = PageData{Resources: resources, User: user}
+  } else {
+    pageData = PageData{Resources: resources, User: repo.User{}}
+  }
+
+  RenderTemplate(w, "home", pageData)
 }
 
 func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -228,4 +224,22 @@ func initDB() *pgxpool.Pool{
   }
 
   return conn
+}
+
+func serveResource(w http.ResponseWriter, r *http.Request) {
+	f, err := os.Open(filepath.Join(".", r.URL.Path))
+	if err != nil {
+		http.Error(w, r.RequestURI, http.StatusNotFound)
+		return
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		http.Error(w, r.RequestURI, http.StatusNotFound)
+		return
+	}
+	modTime := fi.ModTime()
+
+	http.ServeContent(w, r, r.URL.Path, modTime, f)
 }

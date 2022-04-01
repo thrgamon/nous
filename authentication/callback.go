@@ -62,6 +62,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
   }
 
   sessionState.Values["access_token"] =  token.AccessToken
+  sessionState.Values["user_id"] =  profile.Sub
   if err :=sessionState.Save(r, w); err != nil {
     http.Error(w, "Oh No", http.StatusInternalServerError)
     return
