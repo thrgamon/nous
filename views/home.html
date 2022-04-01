@@ -3,12 +3,13 @@
     <link rel="stylesheet" href="public/main.css">
 </head> 
 <body>
-      {{ if not .User.Username }}
-    <a href="/login">SignIn</a>
-      {{else}}
-    {{.User.Username}}
-    <a href="/logout">LogOut</a>
-      {{end}}
+    <header>
+    {{ if not .User.Username }}
+      <a href="/login">login</a>
+    {{else}}
+      <a href="/logout">logout</a>
+    {{end}}
+    </header>
     <form action="/resource" method="post">
       <label for="link">Link</label>
       <input type="url" name="link">
