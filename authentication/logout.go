@@ -20,6 +20,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	returnTo, err := url.Parse(scheme + "://" + r.Host)
+  println(returnTo.String())
   if err != nil {
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return
