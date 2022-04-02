@@ -14,11 +14,13 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
+	_, present := os.LookupEnv("USE_SSL")
 	var scheme string
-	if r.TLS == nil {
-		scheme = "http"
-	} else {
+	if present {
 		scheme = "https"
+	} else {
+		scheme = "http"
 	}
 
 	returnTo, err := url.Parse(scheme + "://" + r.Host)
