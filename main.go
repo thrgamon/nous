@@ -30,7 +30,7 @@ import (
 var REPO *ResourceRepo
 var USER_REPO *repo.UserRepo
 var DB *pgxpool.Pool
-var STORE *sessions.CookieStore 
+var STORE *sessions.CookieStore
 var AUTH *authentication.Authenticator
 
 var Templates map[string]*template.Template
@@ -39,141 +39,140 @@ var Templates map[string]*template.Template
 var views embed.FS
 
 func main() {
-  DB = initDB()
-  defer DB.Close()
+	DB = initDB()
+	defer DB.Close()
 
-  REPO = NewResourceRepo(DB)
-  USER_REPO = repo.NewUserRepo(DB)
-  cacheTemplates()
+	REPO = NewResourceRepo(DB)
+	USER_REPO = repo.NewUserRepo(DB)
+	cacheTemplates()
 
-  STORE = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+	STORE = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 
-  authenticator, _ := authentication.New()
+	authenticator, _ := authentication.New()
 
-  AUTH = authenticator
-  authentication.Auth = AUTH
-  authentication.Store = STORE
-  authentication.Repo = USER_REPO
+	AUTH = authenticator
+	authentication.Auth = AUTH
+	authentication.Store = STORE
+	authentication.Repo = USER_REPO
 
+	r := mux.NewRouter()
+	r.HandleFunc("/login", LoginHandler)
+	r.HandleFunc("/logout", authentication.Logout)
+	r.HandleFunc("/callback", authentication.CallbackHandler)
+	r.HandleFunc("/", HomeHandler)
+	r.HandleFunc("/resource", AddResourceHandler)
+	r.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
+	r.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
+	r.PathPrefix("/public/").HandlerFunc(serveResource)
 
-  r := mux.NewRouter()
-  r.HandleFunc("/login", LoginHandler)
-  r.HandleFunc("/logout", authentication.Logout)
-  r.HandleFunc("/callback", authentication.CallbackHandler)
-  r.HandleFunc("/", HomeHandler)
-  r.HandleFunc("/resource", AddResourceHandler)
-  r.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
-  r.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
-  r.PathPrefix("/public/").HandlerFunc(serveResource)
-
-  srv := &http.Server{
-    Handler: handlers.CombinedLoggingHandler(os.Stdout, r),
-    Addr:    "0.0.0.0:" + env.GetEnvWithFallback("PORT", "8080"),
-    WriteTimeout: 15 * time.Second,
-    ReadTimeout:  15 * time.Second,
-  }
-  println("Server listening")
+	srv := &http.Server{
+		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
+		Addr:         "0.0.0.0:" + env.GetEnvWithFallback("PORT", "8080"),
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	println("Server listening")
 	log.Fatal(srv.ListenAndServe())
 }
 
 type PageData struct {
-  User repo.User
-  Resources []Resource
+	User      repo.User
+	Resources []Resource
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-  sessionState, _ := STORE.Get(r, "auth")
-  resources, err := REPO.GetAll(r.Context())
+	sessionState, _ := STORE.Get(r, "auth")
+	resources, err := REPO.GetAll(r.Context())
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-  var pageData PageData
-  userId, ok := sessionState.Values["user_id"].(string)
-  if ok {
-    _, user := USER_REPO.Get(r.Context(), userId)
-    pageData = PageData{Resources: resources, User: user}
-  } else {
-    pageData = PageData{Resources: resources, User: repo.User{}}
-  }
+	var pageData PageData
+	userId, ok := sessionState.Values["user_id"].(string)
+	if ok {
+		_, user := USER_REPO.Get(r.Context(), userId)
+		pageData = PageData{Resources: resources, User: user}
+	} else {
+		pageData = PageData{Resources: resources, User: repo.User{}}
+	}
 
-  RenderTemplate(w, "home", pageData)
+	RenderTemplate(w, "home", pageData)
 }
 
 func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
-  vars := mux.Vars(r)
-  resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-  err := REPO.Upvote(r.Context(), uint(resourceId))
+	vars := mux.Vars(r)
+	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
+	err := REPO.Upvote(r.Context(), uint(resourceId))
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-  http.Redirect(w, r, "/", 303)
+	http.Redirect(w, r, "/", 303)
 }
 
 func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
-  r.ParseForm()
+	r.ParseForm()
 
 	name := r.FormValue("name")
 	link := r.FormValue("link")
 
-  err := REPO.Add(r.Context(), link, name)
+	err := REPO.Add(r.Context(), link, name)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-  http.Redirect(w, r, "/", 303)
+	http.Redirect(w, r, "/", 303)
 }
 
 func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
-  vars := mux.Vars(r)
-  resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-  err := REPO.Downvote(r.Context(), uint(resourceId))
+	vars := mux.Vars(r)
+	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
+	err := REPO.Downvote(r.Context(), uint(resourceId))
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-  http.Redirect(w, r, "/", 303)
+	http.Redirect(w, r, "/", 303)
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-  state, err := generateRandomState()
+	state, err := generateRandomState()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-    return
+		return
 	}
 
-  session, err := STORE.Get(r, "auth") 
+	session, err := STORE.Get(r, "auth")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-    return
+		return
 	}
 
-  session.Values["state"] = state
+	session.Values["state"] = state
 
-  error := session.Save(r, w)
+	error := session.Save(r, w)
 	if error != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-    return
+		return
 	}
 
-  http.Redirect(w, r, AUTH.AuthCodeURL(state), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, AUTH.AuthCodeURL(state), http.StatusTemporaryRedirect)
 }
 
 func generateRandomState() (string, error) {
-  b := make([]byte, 32)
-  _, err := rand.Read(b)
-  if err != nil {
-    return "", err
-  }
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
 
-  state := base64.StdEncoding.EncodeToString(b)
+	state := base64.StdEncoding.EncodeToString(b)
 
-  return state, nil
+	return state, nil
 }
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
@@ -185,7 +184,7 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 }
 
 func cacheTemplates() {
-  re := regexp.MustCompile(`^[a-zA-Z\/]*\.html`)
+	re := regexp.MustCompile(`^[a-zA-Z\/]*\.html`)
 	templates := make(map[string]*template.Template)
 	// Walk the template directory and parse all templates that aren't fragments
 	err := fs.WalkDir(views, ".",
@@ -216,14 +215,14 @@ func cacheTemplates() {
 
 }
 
-func initDB() *pgxpool.Pool{
-  conn, err := pgxpool.Connect(context.TODO(), os.Getenv("DATABASE_URL"))
+func initDB() *pgxpool.Pool {
+	conn, err := pgxpool.Connect(context.TODO(), os.Getenv("DATABASE_URL"))
 
-  if err != nil {
-    log.Fatal(err)
-  }
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  return conn
+	return conn
 }
 
 func serveResource(w http.ResponseWriter, r *http.Request) {
