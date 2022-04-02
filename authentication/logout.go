@@ -14,13 +14,14 @@ func Logout(w http.ResponseWriter, r *http.Request) {
     return
   }
 
-	scheme := "http"
-	if r.TLS != nil {
+	var scheme string
+	if r.TLS == nil {
+		scheme = "http"
+	} else {
 		scheme = "https"
 	}
 
 	returnTo, err := url.Parse(scheme + "://" + r.Host)
-  println(returnTo.String())
   if err != nil {
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return
