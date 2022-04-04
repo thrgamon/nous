@@ -12,12 +12,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"context"
 
 	"github.com/thrgamon/learning_rank/authentication"
 	"github.com/thrgamon/learning_rank/env"
 	"github.com/thrgamon/learning_rank/repo"
 
-	"context"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -31,6 +31,7 @@ var views embed.FS
 var Db *pgxpool.Pool
 var Store *sessions.CookieStore
 var Templates map[string]*template.Template
+var Log *log.Logger
 
 func main() {
 	Db = initDB()
@@ -38,10 +39,12 @@ func main() {
 
 	cacheTemplates()
 
+  Log = log.New(os.Stdout, "logger: ", log.Lshortfile)
 	Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 
 	authentication.Store = Store
 	authentication.Db = Db
+	authentication.Log = Log
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authentication.LoginHandler)
@@ -74,7 +77,8 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	resources, err := resourceRepo.GetAll(r.Context(), user.ID)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+    Log.Println(err.Error())
     return
 	}
 
@@ -93,7 +97,8 @@ func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
 	err := resourceRepo.Upvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+    Log.Println(err.Error())
     return
 	}
 
@@ -110,7 +115,8 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 	err := resourceRepo.Add(r.Context(), link, name)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+    Log.Println(err.Error())
     return
 	}
 
@@ -126,7 +132,8 @@ func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 	err := resourceRepo.Downvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+    Log.Println(err.Error())
     return
 	}
 
@@ -138,7 +145,8 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	err := Templates[tmpl].Execute(w, data)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+    Log.Println(err.Error())
     return
 	}
 }
