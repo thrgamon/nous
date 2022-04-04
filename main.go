@@ -25,11 +25,8 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-var REPO *repo.ResourceRepo
-var USER_REPO *repo.UserRepo
-var DB *pgxpool.Pool
-var STORE *sessions.CookieStore
-var AUTH *authentication.Authenticator
+var Db *pgxpool.Pool
+var Store *sessions.CookieStore
 
 var Templates map[string]*template.Template
 
@@ -37,21 +34,15 @@ var Templates map[string]*template.Template
 var views embed.FS
 
 func main() {
-	DB = initDB()
-	defer DB.Close()
+	Db = initDB()
+	defer Db.Close()
 
-	REPO = repo.NewResourceRepo(DB)
-	USER_REPO = repo.NewUserRepo(DB)
 	cacheTemplates()
 
-	STORE = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+	Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 
-	authenticator, _ := authentication.New()
-
-	AUTH = authenticator
-	authentication.Auth = AUTH
-	authentication.Store = STORE
-	authentication.Repo = USER_REPO
+	authentication.Store = Store
+	authentication.Db = Db
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authentication.LoginHandler)
@@ -80,7 +71,8 @@ type PageData struct {
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
   user, _ := getUserFromSession(r)
-	resources, err := REPO.GetAll(r.Context(), user.ID)
+  resourceRepo := repo.NewResourceRepo(Db)
+	resources, err := resourceRepo.GetAll(r.Context(), user.ID)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -93,11 +85,12 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUserFromSession(r *http.Request) (repo.User, bool) {
-	sessionState, _ := STORE.Get(r, "auth")
+	sessionState, _ := Store.Get(r, "auth")
+  userRepo := repo.NewUserRepo(Db)
 	userId, ok := sessionState.Values["user_id"].(string)
 
   if ok {
-    _, user := USER_REPO.Get(r.Context(), userId)
+    _, user := userRepo.Get(r.Context(), userId)
     return user, true
   } else {
     return repo.User{}, false
@@ -108,7 +101,8 @@ func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
   user, _ := getUserFromSession(r)
-	err := REPO.Upvote(r.Context(), user.ID, uint(resourceId))
+  resourceRepo := repo.NewResourceRepo(Db)
+	err := resourceRepo.Upvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -123,7 +117,8 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	link := r.FormValue("link")
 
-	err := REPO.Add(r.Context(), link, name)
+  resourceRepo := repo.NewResourceRepo(Db)
+	err := resourceRepo.Add(r.Context(), link, name)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -136,7 +131,9 @@ func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
   user, _ := getUserFromSession(r)
-	err := REPO.Downvote(r.Context(), user.ID, uint(resourceId))
+  resourceRepo := repo.NewResourceRepo(Db)
+
+	err := resourceRepo.Downvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

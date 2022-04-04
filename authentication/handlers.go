@@ -45,6 +45,7 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	authenticator, _ := New()
 	state, err := generateRandomState()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -65,7 +66,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, Auth.AuthCodeURL(state), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, authenticator.AuthCodeURL(state), http.StatusTemporaryRedirect)
 }
 
 
