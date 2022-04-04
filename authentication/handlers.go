@@ -1,11 +1,11 @@
 package authentication
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"net/http"
 	"net/url"
 	"os"
-  "crypto/rand"
-	"encoding/base64"
 )
 
 // Handler for our logout.
@@ -15,7 +15,6 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 
 	_, present := os.LookupEnv("USE_SSL")
 	var scheme string
@@ -68,7 +67,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, authenticator.AuthCodeURL(state), http.StatusTemporaryRedirect)
 }
-
 
 func generateRandomState() (string, error) {
 	b := make([]byte, 32)

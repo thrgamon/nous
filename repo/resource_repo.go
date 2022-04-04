@@ -7,11 +7,11 @@ import (
 )
 
 type Resource struct {
-	ID   uint
-	Link string
-	Name string
-	Rank int
-  Voted bool
+	ID    uint
+	Link  string
+	Name  string
+	Rank  int
+	Voted bool
 }
 
 type ResourceRepo struct {
@@ -45,8 +45,8 @@ func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, e
 	var resources []Resource
 
 	rows, err := rr.db.Query(
-    ctx, 
-    `SELECT
+		ctx,
+		`SELECT
       resources.id,
       link,
       name,
@@ -60,8 +60,8 @@ func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, e
     ORDER BY
       rank DESC,
       resources.inserted_at;`,
-    userId,
-    )
+		userId,
+	)
 	defer rows.Close()
 
 	if err != nil {
@@ -75,7 +75,7 @@ func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, e
 		var rank int
 		var voted int
 		rows.Scan(&id, &link, &name, &rank, &voted)
-resources = append(resources, Resource{ID: uint(id), Link: link, Name: name, Rank: rank, Voted: voted == 1})
+		resources = append(resources, Resource{ID: uint(id), Link: link, Name: name, Rank: rank, Voted: voted == 1})
 	}
 
 	if err != nil {

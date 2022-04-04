@@ -39,31 +39,31 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 
 	var profile Profile
 	if err := idToken.Claims(&profile); err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 
-  userRepo := repo.NewUserRepo(Db)
+	userRepo := repo.NewUserRepo(Db)
 	err, exists := userRepo.Exists(r.Context(), profile.Sub)
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 
 	if !exists {
-		err :=userRepo.Add(r.Context(), profile.Nickname, profile.Sub)
+		err := userRepo.Add(r.Context(), profile.Nickname, profile.Sub)
 		if err != nil {
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+			http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+			Log.Println(err.Error())
+			return
 		}
 	}
 
@@ -71,8 +71,8 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	sessionState.Values["user_id"] = profile.Sub
 	if err := sessionState.Save(r, w); err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)

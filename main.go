@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"html/template"
 	"io/fs"
@@ -12,12 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"context"
 
 	"github.com/thrgamon/learning_rank/authentication"
 	"github.com/thrgamon/learning_rank/env"
 	"github.com/thrgamon/learning_rank/repo"
-
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -39,7 +38,7 @@ func main() {
 
 	cacheTemplates()
 
-  Log = log.New(os.Stdout, "logger: ", log.Lshortfile)
+	Log = log.New(os.Stdout, "logger: ", log.Lshortfile)
 	Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 
 	authentication.Store = Store
@@ -72,14 +71,14 @@ type PageData struct {
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-  user, _ := getUserFromSession(r)
-  resourceRepo := repo.NewResourceRepo(Db)
+	user, _ := getUserFromSession(r)
+	resourceRepo := repo.NewResourceRepo(Db)
 	resources, err := resourceRepo.GetAll(r.Context(), user.ID)
 
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 
 	var pageData PageData
@@ -91,15 +90,15 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-  user, _ := getUserFromSession(r)
-  resourceRepo := repo.NewResourceRepo(Db)
+	user, _ := getUserFromSession(r)
+	resourceRepo := repo.NewResourceRepo(Db)
 
 	err := resourceRepo.Upvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 
 	http.Redirect(w, r, "/", 303)
@@ -111,13 +110,13 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	link := r.FormValue("link")
 
-  resourceRepo := repo.NewResourceRepo(Db)
+	resourceRepo := repo.NewResourceRepo(Db)
 	err := resourceRepo.Add(r.Context(), link, name)
 
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 
 	http.Redirect(w, r, "/", 303)
@@ -126,28 +125,27 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-  user, _ := getUserFromSession(r)
-  resourceRepo := repo.NewResourceRepo(Db)
+	user, _ := getUserFromSession(r)
+	resourceRepo := repo.NewResourceRepo(Db)
 
 	err := resourceRepo.Downvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 
 	http.Redirect(w, r, "/", 303)
 }
-
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	err := Templates[tmpl].Execute(w, data)
 
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-    Log.Println(err.Error())
-    return
+		Log.Println(err.Error())
+		return
 	}
 }
 
@@ -215,14 +213,13 @@ func serveResource(w http.ResponseWriter, r *http.Request) {
 
 func getUserFromSession(r *http.Request) (repo.User, bool) {
 	sessionState, _ := Store.Get(r, "auth")
-  userRepo := repo.NewUserRepo(Db)
+	userRepo := repo.NewUserRepo(Db)
 	userId, ok := sessionState.Values["user_id"].(string)
 
-  if ok {
-    _, user := userRepo.Get(r.Context(), userId)
-    return user, true
-  } else {
-    return repo.User{}, false
-  }
+	if ok {
+		_, user := userRepo.Get(r.Context(), userId)
+		return user, true
+	} else {
+		return repo.User{}, false
+	}
 }
-
