@@ -12,14 +12,26 @@
     </header>
     <form action="/resource" method="post">
       <label for="link">Link</label>
-      <input type="url" name="link">
+      <input type="url" name="link" required>
       <label for="name">Name</label>
-      <input type="text" name="name">
+      <input type="text" name="name" required>
+      <label for="tags">Tags</label>
+      <input type="text" name="tags" placeholder="use, comma, 'seperated values'" required>
       <input type="submit" value="Submit">
     </form>
     <ul>
   {{range .Resources}}
-      <li class="resource"><a href="{{.Link}}"/>{{.Name}}</a> | {{.Rank}} {{if not .Voted }}<a class="" href="/up/{{.ID}}">&#8679;</a>{{else}} <a class="voted" href="/down/{{.ID}}">&#8679;</a>{{end}}</li>
+      <li class="resource">
+        <a href="{{.Link}}"/>{{.Name}}</a> | {{.Rank}} 
+        {{if not .Voted }}
+          <a class="" href="/up/{{.ID}}">&#8679;</a>
+        {{else}}
+          <a class="voted" href="/down/{{.ID}}">&#8679;</a>
+        {{end}}
+        {{ range .Tags }} 
+          {{.}}
+        {{end}}
+      </li>
   {{end}}
       </ul>
 </body>

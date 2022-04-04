@@ -76,6 +76,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	resources, err := resourceRepo.GetAll(r.Context(), user.ID)
 
 	if err != nil {
+    println(err.Error())
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
 		Log.Println(err.Error())
 		return
@@ -109,9 +110,11 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 
 	name := r.FormValue("name")
 	link := r.FormValue("link")
+	tags := r.FormValue("tags")
 
 	resourceRepo := repo.NewResourceRepo(Db)
-	err := resourceRepo.Add(r.Context(), link, name)
+	user, _ := getUserFromSession(r)
+	err := resourceRepo.Add(r.Context(), user.ID, link, name, tags)
 
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
