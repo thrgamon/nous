@@ -46,14 +46,17 @@ func main() {
 	authentication.Log = Log
 
 	r := mux.NewRouter()
+	r.HandleFunc("/", HomeHandler)
+	r.PathPrefix("/public/").HandlerFunc(serveResource)
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
 	r.HandleFunc("/callback", authentication.CallbackHandler)
-	r.HandleFunc("/", HomeHandler)
-	r.HandleFunc("/resource", AddResourceHandler)
-	r.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
-	r.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
-	r.PathPrefix("/public/").HandlerFunc(serveResource)
+
+  authedRouter := r.NewRoute().Subrouter()
+  authedRouter.Use(ensureAuthed)
+	authedRouter.HandleFunc("/resource", AddResourceHandler)
+	authedRouter.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
+	authedRouter.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
@@ -225,4 +228,16 @@ func getUserFromSession(r *http.Request) (repo.User, bool) {
 	} else {
 		return repo.User{}, false
 	}
+}
+
+func ensureAuthed(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    _, ok := getUserFromSession(r)
+    if ok {
+		  next.ServeHTTP(w, r)
+    } else {
+		  http.Error(w, "User not authorised to perform this action", http.StatusUnauthorized)
+      return
+    }
+	})
 }
