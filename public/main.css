@@ -36,3 +36,27 @@ a.voted {
   color: red;
 }
 
+.resource {
+  margin-top: 1em;
+  display: flex;
+  align-items: center;
+}
+.vote-button {
+  text-decoration: none;
+}
+.tags {
+  font-size: 0.8em;
+  color: darkgray;
+  padding-inline-start: 0;
+}
+.tag {
+    display: inline-block;
+}
+.tag ~ .tag::before{
+  margin-left: -0.25em;
+  content: ", ";
+}
+
+.voting {
+  margin-right: 1em;
+}

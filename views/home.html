@@ -22,15 +22,22 @@
     <ul>
   {{range .Resources}}
       <li class="resource">
-        <a href="{{.Link}}"/>{{.Name}}</a> | {{.Rank}} 
-        {{if not .Voted }}
-          <a class="" href="/up/{{.ID}}">&#8679;</a>
-        {{else}}
-          <a class="voted" href="/down/{{.ID}}">&#8679;</a>
-        {{end}}
-        {{ range .Tags }} 
-          {{.}}
-        {{end}}
+        <div class="voting">
+          {{.Rank}} 
+          {{if not .Voted }}
+            <a class="vote-button" href="/up/{{.ID}}">&#8679;</a>
+          {{else}}
+            <a class="vote-button voted" href="/down/{{.ID}}">&#8679;</a>
+          {{end}}
+        </div>
+        <div class="resource-info">
+          <a href="{{.Link}}"/>{{.Name}}</a>
+          <ul class="tags">
+            {{ range .Tags }} 
+            <li class="tag">{{.}}</li>
+            {{end}}
+        </ul>
+        </div>
       </li>
   {{end}}
       </ul>
