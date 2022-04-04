@@ -1,4 +1,4 @@
-package main
+package repo
 
 import (
 	"context"
@@ -11,6 +11,7 @@ type Resource struct {
 	Link string
 	Name string
 	Rank int
+  Voted bool
 }
 
 type ResourceRepo struct {
@@ -40,10 +41,27 @@ func (rr ResourceRepo) Get(id uint) (error, Resource) {
 	return nil, resource
 }
 
-func (rr ResourceRepo) GetAll(ctx context.Context) ([]Resource, error) {
+func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, error) {
 	var resources []Resource
 
-	rows, err := rr.db.Query(ctx, "SELECT id, link, name, rank FROM resources ORDER BY rank DESC")
+	rows, err := rr.db.Query(
+    ctx, 
+    `SELECT
+      resources.id,
+      link,
+      name,
+      count(votes.user_id) AS rank,
+      COUNT(votes.user_id) FILTER (WHERE votes.user_id = $1) AS userVoted
+    FROM
+      resources
+      LEFT JOIN votes ON votes.resource_id = resources.id
+    GROUP BY
+      resources.id
+    ORDER BY
+      rank DESC,
+      resources.inserted_at;`,
+    userId,
+    )
 	defer rows.Close()
 
 	if err != nil {
@@ -55,8 +73,9 @@ func (rr ResourceRepo) GetAll(ctx context.Context) ([]Resource, error) {
 		var link string
 		var name string
 		var rank int
-		rows.Scan(&id, &link, &name, &rank)
-		resources = append(resources, Resource{ID: uint(id), Link: link, Name: name, Rank: rank})
+		var voted int
+		rows.Scan(&id, &link, &name, &rank, &voted)
+resources = append(resources, Resource{ID: uint(id), Link: link, Name: name, Rank: rank, Voted: voted == 1})
 	}
 
 	if err != nil {
@@ -72,14 +91,14 @@ func (rr ResourceRepo) Add(ctx context.Context, link string, name string) error 
 	return err
 }
 
-func (rr ResourceRepo) Upvote(ctx context.Context, id uint) error {
-	_, err := rr.db.Exec(ctx, "UPDATE resources SET rank = rank + 1 WHERE id = $1", id)
+func (rr ResourceRepo) Upvote(ctx context.Context, userId UserID, resourceId uint) error {
+	_, err := rr.db.Exec(ctx, "INSERT INTO votes (user_id, resource_id) VALUES ($1, $2)", userId, resourceId)
 
 	return err
 }
 
-func (rr ResourceRepo) Downvote(ctx context.Context, id uint) error {
-	_, err := rr.db.Exec(ctx, "UPDATE resources SET rank = rank - 1 WHERE id = $1", id)
+func (rr ResourceRepo) Downvote(ctx context.Context, userId UserID, resourceId uint) error {
+	_, err := rr.db.Exec(ctx, "DELETE FROM votes where user_id=$1 AND resource_id=$2", userId, resourceId)
 
 	return err
 }

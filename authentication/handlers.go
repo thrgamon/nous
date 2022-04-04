@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+  "crypto/rand"
+	"encoding/base64"
 )
 
 // Handler for our logout.
@@ -40,4 +42,41 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	sessionState.Save(r, w)
 
 	http.Redirect(w, r, logoutUrl.String(), http.StatusTemporaryRedirect)
+}
+
+func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	state, err := generateRandomState()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	session, err := Store.Get(r, "auth")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	session.Values["state"] = state
+
+	error := session.Save(r, w)
+	if error != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, Auth.AuthCodeURL(state), http.StatusTemporaryRedirect)
+}
+
+
+func generateRandomState() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+
+	state := base64.StdEncoding.EncodeToString(b)
+
+	return state, nil
 }

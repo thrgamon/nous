@@ -2,3 +2,37 @@ html {
   background: #fff;
   font-family: sans-serif;
 }
+
+header {
+  display: grid;
+  justify-content: end;
+}
+
+a {
+  color: black;
+}
+
+a:link {
+  color: black;
+}
+
+a:visited {
+  color: black;
+}
+
+a:focus {
+  color: grey;
+}
+
+a:hover {
+  color: grey;
+}
+
+a:active {
+  color: grey;
+}
+
+a.voted {
+  color: red;
+}
+

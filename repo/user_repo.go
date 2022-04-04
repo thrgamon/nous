@@ -6,8 +6,10 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+type UserID uint
+
 type User struct {
-	ID       uint
+	ID       UserID
 	Username string
 	AuthId   string
 }
@@ -23,7 +25,7 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 }
 
 func (rr UserRepo) Get(ctx context.Context, authId string) (error, User) {
-	var userId uint
+	var userId UserID
 	var username string
 	err := rr.db.QueryRow(context.TODO(), "select id, username from users where users.auth_id = $1", authId).Scan(&userId, &username)
 
