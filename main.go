@@ -25,13 +25,12 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-var Db *pgxpool.Pool
-var Store *sessions.CookieStore
-
-var Templates map[string]*template.Template
-
 //go:embed views/*
 var views embed.FS
+
+var Db *pgxpool.Pool
+var Store *sessions.CookieStore
+var Templates map[string]*template.Template
 
 func main() {
 	Db = initDB()
@@ -76,6 +75,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
 	}
 
 	var pageData PageData
@@ -84,28 +84,17 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "home", pageData)
 }
 
-func getUserFromSession(r *http.Request) (repo.User, bool) {
-	sessionState, _ := Store.Get(r, "auth")
-  userRepo := repo.NewUserRepo(Db)
-	userId, ok := sessionState.Values["user_id"].(string)
-
-  if ok {
-    _, user := userRepo.Get(r.Context(), userId)
-    return user, true
-  } else {
-    return repo.User{}, false
-  }
-}
-
 func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
   user, _ := getUserFromSession(r)
   resourceRepo := repo.NewResourceRepo(Db)
+
 	err := resourceRepo.Upvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
 	}
 
 	http.Redirect(w, r, "/", 303)
@@ -122,6 +111,7 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
 	}
 
 	http.Redirect(w, r, "/", 303)
@@ -137,6 +127,7 @@ func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
 	}
 
 	http.Redirect(w, r, "/", 303)
@@ -146,9 +137,9 @@ func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	err := Templates[tmpl].Execute(w, data)
 
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+    return
 	}
 }
 
@@ -185,7 +176,7 @@ func cacheTemplates() {
 }
 
 func initDB() *pgxpool.Pool {
-	conn, err := pgxpool.Connect(context.TODO(), os.Getenv("DATABASE_URL"))
+	conn, err := pgxpool.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 
 	if err != nil {
 		log.Fatal(err)
@@ -194,6 +185,8 @@ func initDB() *pgxpool.Pool {
 	return conn
 }
 
+// Handler for serving static assets with modified time to help
+// caching
 func serveResource(w http.ResponseWriter, r *http.Request) {
 	f, err := os.Open(filepath.Join(".", r.URL.Path))
 	if err != nil {
@@ -211,3 +204,17 @@ func serveResource(w http.ResponseWriter, r *http.Request) {
 
 	http.ServeContent(w, r, r.URL.Path, modTime, f)
 }
+
+func getUserFromSession(r *http.Request) (repo.User, bool) {
+	sessionState, _ := Store.Get(r, "auth")
+  userRepo := repo.NewUserRepo(Db)
+	userId, ok := sessionState.Values["user_id"].(string)
+
+  if ok {
+    _, user := userRepo.Get(r.Context(), userId)
+    return user, true
+  } else {
+    return repo.User{}, false
+  }
+}
+
