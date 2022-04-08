@@ -50,18 +50,18 @@ func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, e
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-	resource_search.id,
-	link,
-	name,
-	rank,
-	tags,
-	CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted
-FROM
-	resource_search
-	LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
-ORDER BY
-	rank DESC,
-	inserted_at;`,
+      resource_search.id,
+      link,
+      name,
+      rank,
+      CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted,
+      tags
+    FROM
+      resource_search
+      LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
+    ORDER BY
+      rank DESC,
+      inserted_at;`,
 		userId,
 	)
 	defer rows.Close()
@@ -141,8 +141,8 @@ func (rr ResourceRepo) Search(ctx context.Context, searchQuery string, userId Us
       link,
       name,
       rank,
-      tags,
-	    CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted
+	    CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted,
+      tags
     FROM
       resource_search
       LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
