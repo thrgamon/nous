@@ -50,21 +50,18 @@ func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, e
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      resources.id,
-      link,
-      name,
-      COUNT(DISTINCT votes.user_id) as rank,
-      COUNT(DISTINCT votes.user_id) FILTER (where votes.user_id = $1) as uservoted,
-      ARRAY_AGG(DISTINCT tags.tag) as tags
-    FROM
-      resources
-      left JOIN votes ON votes.resource_id = resources.id
-      LEFT JOIN tags ON tags.resource_id = resources.id
-    GROUP BY
-      resources.id
-    ORDER BY
-      rank DESC,
-      resources.inserted_at;`,
+	resource_search.id,
+	link,
+	name,
+	rank,
+	tags,
+	CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted
+FROM
+	resource_search
+	LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
+ORDER BY
+	rank DESC,
+	inserted_at;`,
 		userId,
 	)
 	defer rows.Close()
@@ -139,31 +136,23 @@ func (rr ResourceRepo) Search(ctx context.Context, searchQuery string, userId Us
 
 	rows, err := rr.db.Query(
 		ctx,
-    `SELECT
-      resources.id,
-      resources.link,
-      resources.name,
-      COUNT(DISTINCT votes.user_id) AS rank,
-      COUNT(DISTINCT votes.user_id) FILTER (WHERE votes.user_id = $2) AS uservoted,
-      ARRAY_AGG(DISTINCT tags.tag) AS tags
-    FROM (
-      SELECT
-        resources.id,
-        to_tsvector(resources.name || ' ' || resources.link || ' ' || string_agg(tags.tag, ' ')) AS doc
-      FROM
-        resources
-      LEFT JOIN tags ON tags.resource_id = resources.id
-    GROUP BY
-      resources.id) search
-      LEFT JOIN resources ON resources.id = search.id
-      LEFT JOIN votes ON votes.resource_id = search.id
-      LEFT JOIN tags ON tags.resource_id = search.id
+		`SELECT
+      resource_search.id,
+      link,
+      name,
+      rank,
+      tags,
+	    CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted
+    FROM
+      resource_search
+      LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
     WHERE
-      search.doc @@ to_tsquery($1)
-    GROUP BY
-      resources.id`,
-		tsquery,
+       resource_search.doc @@ to_tsquery($2)
+    ORDER BY
+      rank DESC,
+      inserted_at;`,
     userId,
+	  tsquery,
 	)
 	defer rows.Close()
 
