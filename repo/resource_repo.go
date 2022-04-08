@@ -132,6 +132,75 @@ func (rr ResourceRepo) Downvote(ctx context.Context, userId UserID, resourceId u
 	return err
 }
 
+func (rr ResourceRepo) Search(ctx context.Context, searchQuery string, userId UserID) ([]Resource, error) {
+	var resources []Resource
+
+  tsquery := strings.Join(strings.Split(searchQuery, " "), " | ")
+
+	rows, err := rr.db.Query(
+		ctx,
+    `SELECT
+      resources.id,
+      resources.link,
+      resources.name,
+      COUNT(DISTINCT votes.user_id) AS rank,
+      COUNT(DISTINCT votes.user_id) FILTER (WHERE votes.user_id = $2) AS uservoted,
+      ARRAY_AGG(DISTINCT tags.tag) AS tags
+    FROM (
+      SELECT
+        resources.id,
+        to_tsvector(resources.name || ' ' || resources.link || ' ' || string_agg(tags.tag, ' ')) AS doc
+      FROM
+        resources
+      LEFT JOIN tags ON tags.resource_id = resources.id
+    GROUP BY
+      resources.id) search
+      LEFT JOIN resources ON resources.id = search.id
+      LEFT JOIN votes ON votes.resource_id = search.id
+      LEFT JOIN tags ON tags.resource_id = search.id
+    WHERE
+      search.doc @@ to_tsquery($1)
+    GROUP BY
+      resources.id`,
+		tsquery,
+    userId,
+	)
+	defer rows.Close()
+
+	if err != nil {
+		return resources, err
+	}
+
+	for rows.Next() {
+		var id int
+		var link string
+		var name string
+		var rank int
+		var voted int
+		var tags []string
+		rows.Scan(&id, &link, &name, &rank, &voted, &tags)
+    resources = append(
+      resources, 
+      Resource{
+        ID: uint(id), 
+        Link: link, 
+        Name: name, 
+        Rank: rank, 
+        Voted: voted == 1,
+        Tags: tags,
+      },
+	  )
+  }
+
+	if err != nil {
+    log.Fatal(err.Error())
+		return resources, err
+	}
+
+	return resources, nil
+}
+
+
 
 func (rr ResourceRepo) withTransaction(ctx context.Context, fn func() error) error {
   tx, err := rr.db.Begin(ctx)

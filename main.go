@@ -51,6 +51,7 @@ func main() {
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
 	r.HandleFunc("/callback", authentication.CallbackHandler)
+	r.HandleFunc("/search", SearchHandler)
 
   authedRouter := r.NewRoute().Subrouter()
   authedRouter.Use(ensureAuthed)
@@ -65,6 +66,7 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 	}
 	println("Server listening")
+  Log.Println("Server listening")
 	log.Fatal(srv.ListenAndServe())
 }
 
@@ -143,6 +145,29 @@ func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/", 303)
+}
+
+func SearchHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	query := r.FormValue("query")
+
+	user, _ := getUserFromSession(r)
+	resourceRepo := repo.NewResourceRepo(Db)
+	resources, err := resourceRepo.Search(r.Context(), query, user.ID)
+
+
+	if err != nil {
+    println(err.Error())
+		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+		Log.Println(err.Error())
+		return
+	}
+
+	var pageData PageData
+	pageData = PageData{Resources: resources, User: user}
+
+	RenderTemplate(w, "home", pageData)
 }
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {

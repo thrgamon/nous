@@ -19,6 +19,12 @@
       <input type="text" name="tags" placeholder="use, comma, 'seperated values'" required>
       <input type="submit" value="Submit">
     </form>
+
+    <form action="/search" method="post">
+      <label for="query">Name</label>
+      <input type="text" name="query" required>
+      <input type="submit" value="Submit">
+    </form>
     <ul>
   {{range .Resources}}
       <li class="resource">
