@@ -1,42 +1,28 @@
-<html>
-<head>
-    <link rel="stylesheet" href="public/main.css">
-</head> 
-<body>
-    <header>
-      <h1><a href="/">Learning Rank</a></h1>
-      <nav>
-        <a href="/submit">Submit</a>
-        {{ if not .User.Username }} <a href="/login">login</a> {{else}} <a href="/logout">logout</a> {{end}}
-      </nav>
-    </header>
-    <main>
-    <form action="/search" method="post">
-      <input type="text" name="query" required placeholder="search">
-      <input type="submit" value="Search">
-    </form>
-    <ul class="resources">
-  {{range .Resources}}
-      <li class="resource">
-        <div class="voting">
-          {{.Rank}} 
-          {{if not .Voted }}
-            <a class="vote-button" href="/up/{{.ID}}">&#8679;</a>
-          {{else}}
-            <a class="vote-button voted" href="/down/{{.ID}}">&#8679;</a>
+  {{template "header" .}}
+  <form action="/search" method="post">
+    <input type="text" name="query" required placeholder="search">
+    <input type="submit" value="Search">
+  </form>
+  <ul class="resources">
+{{range .Resources}}
+    <li class="resource">
+      <div class="voting">
+        {{.Rank}} 
+        {{if not .Voted }}
+          <a class="vote-button" href="/up/{{.ID}}">&#8679;</a>
+        {{else}}
+          <a class="vote-button voted" href="/down/{{.ID}}">&#8679;</a>
+        {{end}}
+      </div>
+      <div class="resource-info">
+        <a href="{{.Link}}"/>{{.Name}}</a>
+        <ul class="tags">
+          {{ range .Tags }} 
+          <li class="tag">{{.}}</li>
           {{end}}
-        </div>
-        <div class="resource-info">
-          <a href="{{.Link}}"/>{{.Name}}</a>
-          <ul class="tags">
-            {{ range .Tags }} 
-            <li class="tag">{{.}}</li>
-            {{end}}
-        </ul>
-        </div>
-      </li>
-  {{end}}
       </ul>
-    </main>
-</body>
-</html>
+      </div>
+    </li>
+{{end}}
+    </ul>
+{{template "footer" .}}

@@ -1,16 +1,4 @@
-<html>
-<head>
-    <link rel="stylesheet" href="public/main.css">
-</head> 
-<body>
-    <header>
-      <h1><a href="/">Learning Rank</a></h1>
-      <nav>
-        <a href="/submit">Submit</a>
-        {{ if not .User.Username }} <a href="/login">login</a> {{else}} <a href="/logout">logout</a> {{end}}
-      </nav>
-    </header>
-    <main>
+  {{template "header" .}}
   <form class="submit" action="/resource" method="post">
     <label for="link">Link</label>
     <input type="url" name="link" required>
@@ -20,6 +8,4 @@
     <input type="text" name="tags" placeholder="use, comma, 'seperated values'" required>
     <input type="submit" value="Submit">
   </form>
-    </main>
-</body>
-</html>
+  {{template "footer" .}}

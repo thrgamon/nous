@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"html/template"
 	"io/fs"
 	"log"
@@ -23,9 +22,6 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
-
-//go:embed views/*
-var views embed.FS
 
 var Db *pgxpool.Pool
 var Store *sessions.CookieStore
@@ -194,7 +190,7 @@ func cacheTemplates() {
 	re := regexp.MustCompile(`^[a-zA-Z\/]*\.html`)
 	templates := make(map[string]*template.Template)
 	// Walk the template directory and parse all templates that aren't fragments
-	err := fs.WalkDir(views, ".",
+	err := filepath.WalkDir("views",
 		func(path string, info fs.DirEntry, err error) error {
 			if err != nil {
 				return err
@@ -203,10 +199,7 @@ func cacheTemplates() {
 			if re.MatchString(path) {
 				normalisedPath := strings.TrimSuffix(strings.TrimPrefix(path, "views/"), ".html")
 				templates[normalisedPath] = template.Must(
-					template.ParseFS(
-						views,
-						path,
-					),
+					template.ParseFiles(path, "views/_header.html", "views/_footer.html"),
 				)
 			}
 

@@ -1,0 +1,14 @@
+{{ define "header" }}
+<html>
+<head>
+    <link rel="stylesheet" href="public/main.css">
+</head> 
+<body>
+    <header>
+      <h1><a href="/">Learning Rank</a></h1>
+      <nav>
+        <a href="/submit">Submit</a>
+        {{ if not .User.Username }} <a href="/login">login</a> {{else}} <a href="/logout">logout</a> {{end}}
+      </nav>
+    </header>
+{{ end }}
