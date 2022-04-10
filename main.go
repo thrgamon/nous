@@ -23,12 +23,26 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+type Environment int
+
+const (
+    Production Environment = iota + 1
+    Development
+)
+
 var Db *pgxpool.Pool
 var Store *sessions.CookieStore
 var Templates map[string]*template.Template
 var Log *log.Logger
+var ENV Environment
 
 func main() {
+  if env.GetEnvWithFallback("ENV", "production") == "development" {
+    ENV = Development
+  } else {
+    ENV = Production
+  }
+
 	Db = initDB()
 	defer Db.Close()
 
@@ -177,13 +191,20 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
-	err := Templates[tmpl].Execute(w, data)
+  // In production we want to read the cached templates, whereas in development
+  // we want to interpret them every time to make it easier to change
+  if ENV == Production {
+    err := Templates[tmpl].Execute(w, data)
 
-	if err != nil {
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-		Log.Println(err.Error())
-		return
-	}
+    if err != nil {
+      http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+      Log.Println(err.Error())
+      return
+    }
+  } else {
+    template := template.Must(template.ParseFiles("views/" + tmpl + ".html", "views/_header.html", "views/_footer.html"))
+    template.Execute(w, data)
+  }
 }
 
 func cacheTemplates() {
