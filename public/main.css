@@ -3,9 +3,15 @@ html {
   font-family: sans-serif;
 }
 
+body {
+  max-width: 800px;
+  margin: auto;
+}
+
 header {
-  display: grid;
-  justify-content: end;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
 }
 
 a {
@@ -36,6 +42,10 @@ a.voted {
   color: red;
 }
 
+header h1 a {
+  text-decoration: none;
+}
+
 .resource {
   margin-top: 1em;
   display: flex;
@@ -59,4 +69,15 @@ a.voted {
 
 .voting {
   margin-right: 1em;
+}
+
+.submit input:not([type="submit" i]){
+  display: block;
+  min-width: 300px;
+  margin-bottom: 1em;
+  margin-top: 0.5em;
+}
+
+.resources {
+  padding-inline-start: 0;
 }

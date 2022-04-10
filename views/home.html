@@ -4,28 +4,18 @@
 </head> 
 <body>
     <header>
-    {{ if not .User.Username }}
-      <a href="/login">login</a>
-    {{else}}
-      <a href="/logout">logout</a>
-    {{end}}
+      <h1><a href="/">Learning Rank</a></h1>
+      <nav>
+        <a href="/submit">Submit</a>
+        {{ if not .User.Username }} <a href="/login">login</a> {{else}} <a href="/logout">logout</a> {{end}}
+      </nav>
     </header>
-    <form action="/resource" method="post">
-      <label for="link">Link</label>
-      <input type="url" name="link" required>
-      <label for="name">Name</label>
-      <input type="text" name="name" required>
-      <label for="tags">Tags</label>
-      <input type="text" name="tags" placeholder="use, comma, 'seperated values'" required>
-      <input type="submit" value="Submit">
-    </form>
-
+    <main>
     <form action="/search" method="post">
-      <label for="query">Name</label>
-      <input type="text" name="query" required>
-      <input type="submit" value="Submit">
+      <input type="text" name="query" required placeholder="search">
+      <input type="submit" value="Search">
     </form>
-    <ul>
+    <ul class="resources">
   {{range .Resources}}
       <li class="resource">
         <div class="voting">
@@ -47,5 +37,6 @@
       </li>
   {{end}}
       </ul>
+    </main>
 </body>
 </html>

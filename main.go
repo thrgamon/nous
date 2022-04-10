@@ -47,6 +47,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler)
+	r.HandleFunc("/submit", SubmitHandler)
 	r.PathPrefix("/public/").HandlerFunc(serveResource)
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
@@ -91,6 +92,15 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	pageData = PageData{Resources: resources, User: user}
 
 	RenderTemplate(w, "home", pageData)
+}
+
+func SubmitHandler(w http.ResponseWriter, r *http.Request) {
+	user, _ := getUserFromSession(r)
+
+	var pageData PageData
+	pageData = PageData{User: user}
+
+	RenderTemplate(w, "submit", pageData)
 }
 
 func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
