@@ -9,6 +9,8 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+type ResouceID uint
+
 type Resource struct {
 	ID    uint
 	Link  url.URL
@@ -30,11 +32,31 @@ func NewResourceRepo(db *pgxpool.Pool) *ResourceRepo {
 	return &repo
 }
 
-func (rr ResourceRepo) Get(id uint) (error, Resource) {
-	var link string
-	var name string
-	var rank int
-	err := rr.db.QueryRow(context.TODO(), "select link, name, rank from resources where resources.id = $1", id).Scan(&link, &name, &rank)
+func (rr ResourceRepo) Get(ctx context.Context, id uint, userId UserID) (error, Resource) {
+  var link string
+  var name string
+  var rank int
+  var voted int
+  var tags []string
+	err := rr.db.QueryRow(
+		ctx,
+		`SELECT
+      link,
+      name,
+      rank,
+      CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted,
+      tags
+    FROM
+      resource_search
+      LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
+    WHERE
+      resource_search.id = $2
+    ORDER BY
+      rank DESC,
+      inserted_at;`,
+		userId,
+    id,
+    ).Scan(&link, &name, &rank, &voted, &tags)
 
 	if err != nil {
 		return err, Resource{}
@@ -46,7 +68,7 @@ func (rr ResourceRepo) Get(id uint) (error, Resource) {
 		return err, Resource{}
 	}
 
-	resource := Resource{ID: id, Link: *urlLink, Name: name, Rank: rank}
+	resource := Resource{ID: id, Link: *urlLink, Name: name, Rank: rank, Voted: voted == 1, Tags: tags}
 
 	return nil, resource
 }

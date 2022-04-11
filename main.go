@@ -58,11 +58,12 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler)
 	r.HandleFunc("/submit", SubmitHandler)
-	r.PathPrefix("/public/").HandlerFunc(serveResource)
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
 	r.HandleFunc("/callback", authentication.CallbackHandler)
 	r.HandleFunc("/search", SearchHandler)
+  r.HandleFunc("/view/{resourceId:[0-9]+}", ViewResourceHandler)
+	r.PathPrefix("/public/").HandlerFunc(serveResource)
 
   authedRouter := r.NewRoute().Subrouter()
   authedRouter.Use(ensureAuthed)
@@ -86,7 +87,10 @@ type PageData struct {
 	Resources []repo.Resource
 }
 
-type HomePageData struct {
+type ResourcePageData struct {
+	User      repo.User
+	Resources  []repo.Resource
+	Comments  []repo.Comment
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +135,25 @@ func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/", 303)
+}
+
+func ViewResourceHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
+	user, _ := getUserFromSession(r)
+	resourceRepo := repo.NewResourceRepo(Db)
+	commentRepo := repo.NewCommentRepo(Db)
+
+	err, resource := resourceRepo.Get(r.Context(), uint(resourceId), user.ID)
+	comments, err := commentRepo.GetAll(r.Context(), uint(resourceId))
+
+	if err != nil {
+		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+		Log.Println(err.Error())
+		return
+	}
+  pageData := ResourcePageData{Resources: []repo.Resource{resource}, User: user, Comments: comments}
+	RenderTemplate(w, "view", pageData)
 }
 
 func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
@@ -206,7 +229,13 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
     }
   } else {
     template := template.Must(template.ParseFiles("views/" + tmpl + ".html", "views/_header.html", "views/_footer.html"))
-    template.Execute(w, data)
+    err := template.Execute(w, data)
+
+    if err != nil {
+      http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+      Log.Println(err.Error())
+      return
+    }
   }
 }
 
