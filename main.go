@@ -86,6 +86,9 @@ type PageData struct {
 	Resources []repo.Resource
 }
 
+type HomePageData struct {
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := getUserFromSession(r)
 	resourceRepo := repo.NewResourceRepo(Db)

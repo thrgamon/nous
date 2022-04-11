@@ -56,10 +56,14 @@ header h1 a {
   text-decoration: none;
 }
 .tags {
-  font-size: 0.8em;
-  color: darkgray;
   padding-inline-start: 0;
 }
+
+.text-subdued {
+    font-size: 0.8em;
+  color: darkgray;
+}
+
 .tag {
     display: inline-block;
 }
@@ -81,4 +85,9 @@ header h1 a {
 
 .resources {
   padding-inline-start: 0;
+}
+
+form p {
+  font-size: 0.8em;
+  line-height: 0.7em;
 }

@@ -15,8 +15,10 @@
         {{end}}
       </div>
       <div class="resource-info">
-        <a href="{{.Link}}"/>{{.Name}}</a>
-        <ul class="tags">
+        <div>
+          <a href="{{.Link.String}}"/>{{.Name}}</a> <span class="text-subdued">&#10140; {{.Link.Hostname}}</span>
+        </div>
+        <ul class="tags text-subdued">
           {{ range .Tags }} 
           <li class="tag">{{.}}</li>
           {{end}}

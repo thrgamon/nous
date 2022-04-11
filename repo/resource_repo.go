@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"log"
+	"net/url"
 	"strings"
 
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -10,7 +11,7 @@ import (
 
 type Resource struct {
 	ID    uint
-	Link  string
+	Link  url.URL
 	Name  string
 	Rank  int
 	Voted bool
@@ -39,7 +40,13 @@ func (rr ResourceRepo) Get(id uint) (error, Resource) {
 		return err, Resource{}
 	}
 
-	resource := Resource{ID: id, Link: link, Name: name, Rank: rank}
+  urlLink, err := url.Parse(link)
+
+	if err != nil {
+		return err, Resource{}
+	}
+
+	resource := Resource{ID: id, Link: *urlLink, Name: name, Rank: rank}
 
 	return nil, resource
 }
@@ -78,11 +85,18 @@ func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, e
 		var voted int
 		var tags []string
 		rows.Scan(&id, &link, &name, &rank, &voted, &tags)
+
+    urlLink, err := url.Parse(link)
+
+    if err != nil {
+      return resources, err
+    }
+
     resources = append(
       resources, 
       Resource{
         ID: uint(id), 
-        Link: link, 
+        Link: *urlLink, 
         Name: name, 
         Rank: rank, 
         Voted: voted == 1,
@@ -168,11 +182,18 @@ func (rr ResourceRepo) Search(ctx context.Context, searchQuery string, userId Us
 		var voted int
 		var tags []string
 		rows.Scan(&id, &link, &name, &rank, &voted, &tags)
+
+    urlLink, err := url.Parse(link)
+
+    if err != nil {
+      return resources, err
+    }
+
     resources = append(
       resources, 
       Resource{
         ID: uint(id), 
-        Link: link, 
+        Link: *urlLink, 
         Name: name, 
         Rank: rank, 
         Voted: voted == 1,
