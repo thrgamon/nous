@@ -63,6 +63,7 @@ func main() {
 	r.HandleFunc("/callback", authentication.CallbackHandler)
 	r.HandleFunc("/search", SearchHandler)
   r.HandleFunc("/view/{resourceId:[0-9]+}", ViewResourceHandler)
+  r.HandleFunc("/resource/{resourceId:[0-9]+}/comment", AddResourceCommentHandler)
 	r.PathPrefix("/public/").HandlerFunc(serveResource)
 
   authedRouter := r.NewRoute().Subrouter()
@@ -174,6 +175,27 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/", 303)
+}
+
+func AddResourceCommentHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	vars := mux.Vars(r)
+	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
+
+	content := r.FormValue("content")
+  parentId, _ := strconv.ParseUint(r.FormValue("parent_id"), 10, 64)
+
+	commentRepo := repo.NewCommentRepo(Db)
+	user, _ := getUserFromSession(r)
+	err := commentRepo.Add(r.Context(), user.ID, uint(resourceId), uint(parentId), content)
+
+	if err != nil {
+		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+		Log.Println(err.Error())
+		return
+	}
+
+	http.Redirect(w, r, "/view/" + vars["resourceId"], 303)
 }
 
 func DownvoteHandler(w http.ResponseWriter, r *http.Request) {

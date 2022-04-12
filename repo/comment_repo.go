@@ -102,3 +102,16 @@ ORDER BY
 
 	return commentTree, nil
 }
+
+func (rr CommentRepo) Add(ctx context.Context, userId UserID, resourceId uint, parentId uint, content string) error {
+  var pid *uint
+  if parentId == 0 {
+    pid = nil
+  } else {
+    pid = &parentId
+  }
+  _, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, parent_id, content) VALUES ($1, $2, $3, $4)", userId, resourceId, pid, content)
+
+  return err
+}
+

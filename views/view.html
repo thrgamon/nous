@@ -1,16 +1,18 @@
 {{ define "comment" }}
-      {{range .}}
-      <ul>
+  {{range .}}
+  <ul>
     <li>
       <details open>
-      <summary>{{.Username}}</summary>
-      <p> {{ .Content }} </p>
+        <summary>{{.Username}}</summary>
+        <p> {{ .Content }} </p>
+  </form>
         {{ template "comment" .Children}}
-    </details>
+      </details>
     </li>
-      </ul>
-    {{ end }}
+  </ul>
+  {{ end }}
 {{ end }}
+
 {{template "header" .}}
 <div class="resources">
   {{range .Resources}}
@@ -34,12 +36,17 @@
       </ul>
     </div>
   </li>
-  {{end}}
+  <form class="comment" action="/resource/{{.ID}}/comment" method="post">
+    <label for="content">Comment</label>
+    <textarea type="text" name="content" required></textarea>
+    <input type="submit" value="Submit">
+  </form>
+</div>
+{{end}}
 
-  <div class="comments">
-    {{ range $key, $value := .Comments }}
-      {{template "comment" $value }}
-    {{ end }}
-  </ul>
+<div class="comments">
+  {{ range $key, $value := .Comments }}
+  {{template "comment" $value }}
+  {{ end }}
 </div>
 {{template "footer" .}}
