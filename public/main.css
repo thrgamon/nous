@@ -91,3 +91,15 @@ form p {
   font-size: 0.8em;
   line-height: 0.7em;
 }
+
+.comments ul {
+  list-style: none;
+  padding-inline-start: 20px;
+}
+
+.comments p {
+  padding-inline-start: 20px;
+  margin-block-start: 0.5em;
+  margin-block-end: 0.5em;
+
+}

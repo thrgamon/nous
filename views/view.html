@@ -3,7 +3,8 @@
       <ul>
     <li>
       <details open>
-      <summary>{{.Content}} {{.Username}}</summary>
+      <summary>{{.Username}}</summary>
+      <p> {{ .Content }} </p>
         {{ template "comment" .Children}}
     </details>
     </li>
