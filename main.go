@@ -90,7 +90,7 @@ type PageData struct {
 type ResourcePageData struct {
 	User      repo.User
 	Resources  []repo.Resource
-	Comments  []repo.Comment
+	Comments  map[uint][]repo.Comment
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {

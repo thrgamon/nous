@@ -12,6 +12,7 @@ type Comment struct {
 	Content  string
 	Username  string
 	ParentId UserID
+  Children []Comment
 }
 
 type CommentRepo struct {
@@ -24,8 +25,8 @@ func NewCommentRepo(db *pgxpool.Pool) *CommentRepo {
 	return &repo
 }
 
-func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) ([]Comment, error) {
-	var comments []Comment
+func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) (map[uint][]Comment, error) {
+  commentTree := make(map[uint][]Comment)
 
 	rows, err := rr.db.Query(
 		ctx,
@@ -55,37 +56,49 @@ func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) ([]Comment, e
 	COALESCE(parent_id, 0) as parent_id
 FROM
 	subcomments
-	join users on users.id = user_id;`,
+	join users on users.id = user_id
+ORDER BY
+    parent_id desc;`,
 		resourceId,
 	)
 	defer rows.Close()
 
 	if err != nil {
-		return comments, err
+		return commentTree, err
 	}
 
 	for rows.Next() {
-		var id int
+		var id uint
 		var content string
 		var username string
 		var parentId uint
 		rows.Scan(&id, &content, &username, &parentId)
 
-    comments = append(
-      comments, 
-      Comment{
+    newComment := Comment{
         ID: uint(id), 
         Content: content,
         Username: username, 
         ParentId: UserID(parentId), 
-      },
-	  )
+      }
+
+    _, parentIdPresent := commentTree[parentId]
+
+    if parentIdPresent{
+      commentTree[parentId] = append(commentTree[parentId], newComment)
+    } else {
+      children, childrenPresent := commentTree[id]
+      if childrenPresent {
+        newComment.Children = children
+      }
+      commentTree[parentId] = append(commentTree[parentId], newComment)
+      delete(commentTree, id)
+    }
   }
 
 	if rows.Err() != nil {
     log.Fatal(rows.Err().Error())
-		return comments, err
+		return commentTree, err
 	}
 
-	return comments, nil
+	return commentTree, nil
 }

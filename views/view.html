@@ -1,3 +1,15 @@
+{{ define "comment" }}
+      {{range .}}
+      <ul>
+    <li>
+      <details open>
+      <summary>{{.Content}} {{.Username}}</summary>
+        {{ template "comment" .Children}}
+    </details>
+    </li>
+      </ul>
+    {{ end }}
+{{ end }}
 {{template "header" .}}
 <div class="resources">
   {{range .Resources}}
@@ -24,11 +36,8 @@
   {{end}}
 
   <div class="comments">
-    {{range .Comments}}
-    <details>
-      <summary>{{.Content}}</summary>
-      {{.Username}}
-    </details>
+    {{ range $key, $value := .Comments }}
+      {{template "comment" $value }}
     {{ end }}
   </ul>
 </div>
