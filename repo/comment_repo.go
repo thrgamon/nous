@@ -11,7 +11,8 @@ type Comment struct {
 	ID    uint
 	Content  string
 	Username  string
-	ParentId UserID
+	ParentId uint
+  ResourceId ResourceID
   Children []Comment
 }
 
@@ -31,34 +32,37 @@ func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) (map[uint][]C
 	rows, err := rr.db.Query(
 		ctx,
     `WITH RECURSIVE subcomments AS (
-	SELECT
-		id,
-		content,
-		user_id,
-		parent_id
-	FROM
-		comments
-	WHERE
-		resource_id = $1
-	UNION
-		SELECT
-			e.id,
-			e.content,
-			e.user_id,
-			e.parent_id
-		FROM
-			comments e
-		INNER JOIN subcomments s ON s.id = e.parent_id
-) SELECT
-	subcomments.id,
-	content,
-	users.username,
-	COALESCE(parent_id, 0) as parent_id
-FROM
-	subcomments
-	join users on users.id = user_id
-ORDER BY
-    parent_id desc;`,
+      SELECT
+        id,
+        content,
+        user_id,
+        parent_id,
+        resource_id
+      FROM
+        comments
+      WHERE
+        resource_id = $1
+      UNION
+        SELECT
+          e.id,
+          e.content,
+          e.user_id,
+          e.parent_id,
+          e.resource_id
+        FROM
+          comments e
+        INNER JOIN subcomments s ON s.id = e.parent_id
+    ) SELECT
+      subcomments.id,
+      content,
+      users.username,
+      COALESCE(parent_id, 0) as parent_id,
+      resource_id
+    FROM
+      subcomments
+      join users on users.id = user_id
+    ORDER BY
+        parent_id desc;`,
 		resourceId,
 	)
 	defer rows.Close()
@@ -72,13 +76,15 @@ ORDER BY
 		var content string
 		var username string
 		var parentId uint
-		rows.Scan(&id, &content, &username, &parentId)
+		var resourceId uint
+		rows.Scan(&id, &content, &username, &parentId, &resourceId)
 
     newComment := Comment{
         ID: uint(id), 
         Content: content,
         Username: username, 
-        ParentId: UserID(parentId), 
+        ParentId: parentId, 
+        ResourceId: ResourceID(resourceId),
       }
 
     _, parentIdPresent := commentTree[parentId]
@@ -103,14 +109,14 @@ ORDER BY
 	return commentTree, nil
 }
 
-func (rr CommentRepo) Add(ctx context.Context, userId UserID, resourceId uint, parentId uint, content string) error {
-  var pid *uint
-  if parentId == 0 {
-    pid = nil
-  } else {
-    pid = &parentId
-  }
-  _, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, parent_id, content) VALUES ($1, $2, $3, $4)", userId, resourceId, pid, content)
+func (rr CommentRepo) Add(ctx context.Context, userId UserID, resourceId uint, content string) error {
+  _, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, content) VALUES ($1, $2, $4)", userId, resourceId, content)
+
+  return err
+}
+
+func (rr CommentRepo) AddChild(ctx context.Context, userId UserID, resourceId uint, parentId uint, content string) error {
+  _, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, parent_id, content) VALUES ($1, $2, $3, $4)", userId, resourceId, parentId, content)
 
   return err
 }

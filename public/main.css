@@ -104,3 +104,13 @@ form p {
 
 }
 
+.comment-box {
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: 20px;
+}
+.comment-box summary {
+  list-style: none;
+  font-size: 0.7em;
+}
+

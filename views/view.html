@@ -3,9 +3,15 @@
   <ul>
     <li>
       <details open>
-        <summary>{{.Username}}</summary>
+        <summary class="text-subdued">{{.Username}}</summary>
         <p> {{ .Content }} </p>
-  </form>
+        <details class="comment-box">
+          <summary>reply</summary>
+            <form class="comment" action="/resource/{{.ResourceId}}/comment/{{.ID}}" method="post">
+              <textarea type="text" name="content" required placeholder="comment"></textarea>
+              <input type="submit" value="Submit">
+            </form>
+          </details>
         {{ template "comment" .Children}}
       </details>
     </li>
@@ -37,8 +43,7 @@
     </div>
   </li>
   <form class="comment" action="/resource/{{.ID}}/comment" method="post">
-    <label for="content">Comment</label>
-    <textarea type="text" name="content" required></textarea>
+    <textarea type="text" name="content" required placeholder="comment"></textarea>
     <input type="submit" value="Submit">
   </form>
 </div>

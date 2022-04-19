@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type ResouceID uint
+type ResourceID uint
 
 type Resource struct {
 	ID    uint

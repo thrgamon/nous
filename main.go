@@ -64,6 +64,7 @@ func main() {
 	r.HandleFunc("/search", SearchHandler)
   r.HandleFunc("/view/{resourceId:[0-9]+}", ViewResourceHandler)
   r.HandleFunc("/resource/{resourceId:[0-9]+}/comment", AddResourceCommentHandler)
+  r.HandleFunc("/resource/{resourceId:[0-9]+}/comment/{parentId:[0-9]+}", AddResourceCommentHandler)
 	r.PathPrefix("/public/").HandlerFunc(serveResource)
 
   authedRouter := r.NewRoute().Subrouter()
@@ -178,16 +179,22 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func AddResourceCommentHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	vars := mux.Vars(r)
-	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-
-	content := r.FormValue("content")
-  parentId, _ := strconv.ParseUint(r.FormValue("parent_id"), 10, 64)
-
 	commentRepo := repo.NewCommentRepo(Db)
 	user, _ := getUserFromSession(r)
-	err := commentRepo.Add(r.Context(), user.ID, uint(resourceId), uint(parentId), content)
+
+	vars := mux.Vars(r)
+	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
+	parentId, _ := strconv.ParseUint(vars["parentId"], 10, 64)
+
+	r.ParseForm()
+	content := r.FormValue("content")
+
+  var err error
+  if parentId == 0 {
+    err = commentRepo.Add(r.Context(), user.ID, uint(resourceId), content)
+  } else {
+    err = commentRepo.AddChild(r.Context(), user.ID, uint(resourceId), uint(parentId), content)
+  }
 
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
