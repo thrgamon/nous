@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"log"
+  "sort"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -62,7 +63,7 @@ func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) (map[uint][]C
       subcomments
       join users on users.id = user_id
     ORDER BY
-        parent_id desc;`,
+        parent_id desc, inserted_at desc;`,
 		resourceId,
 	)
 	defer rows.Close()
@@ -87,19 +88,52 @@ func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) (map[uint][]C
         ResourceId: ResourceID(resourceId),
       }
 
+    // Check to see if there are comments already under this parent root
     _, parentIdPresent := commentTree[parentId]
 
-    if parentIdPresent{
-      commentTree[parentId] = append(commentTree[parentId], newComment)
-    } else {
+    // If the parent id is present and it is the root id
+    if parentIdPresent && parentId == 0 {
+      // If there are child comments for this comment, grab them and assign them to this comment
       children, childrenPresent := commentTree[id]
       if childrenPresent {
         newComment.Children = children
       }
+      // Start an array of child comments, including this comment, under the parent comment
       commentTree[parentId] = append(commentTree[parentId], newComment)
+      // Delete the child comments key
+      delete(commentTree, id)
+    // If there are comments grouped under the parent comment then start
+    // an array of sibling comments
+    } else if parentIdPresent {
+
+      children, childrenPresent := commentTree[id]
+      // If there are child comments for this comment, grab them and assign them to this comment
+      if childrenPresent {
+        newComment.Children = children
+      }
+
+      commentTree[parentId] = append(commentTree[parentId], newComment)
+      // Delete the child comments key
+      delete(commentTree, id)
+    // If there are no comments grouped under the parent comment, then check to 
+    // see if there are child comments for this comment
+    } else {
+      children, childrenPresent := commentTree[id]
+      // If there are child comments for this comment, grab them and assign them to this comment
+      if childrenPresent {
+        newComment.Children = children
+      }
+      // Start an array of child comments, including this comment, under the parent comment
+      commentTree[parentId] = []Comment{newComment}
+      // Delete the child comments key
       delete(commentTree, id)
     }
   }
+
+  root := commentTree[0]
+  sort.Slice(root, func (i,j int) bool  {
+    return root[i].ID < root[j].ID
+  })
 
 	if rows.Err() != nil {
     log.Fatal(rows.Err().Error())
@@ -110,7 +144,7 @@ func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) (map[uint][]C
 }
 
 func (rr CommentRepo) Add(ctx context.Context, userId UserID, resourceId uint, content string) error {
-  _, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, content) VALUES ($1, $2, $4)", userId, resourceId, content)
+  _, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, content) VALUES ($1, $2, $3)", userId, resourceId, content)
 
   return err
 }
