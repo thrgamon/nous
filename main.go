@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
@@ -202,7 +203,7 @@ func AddResourceCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/view/" + vars["resourceId"], 303)
+	http.Redirect(w, r, "/view/" + vars["resourceId"] + "#" + fmt.Sprint(parentId), 303)
 }
 
 func DownvoteHandler(w http.ResponseWriter, r *http.Request) {

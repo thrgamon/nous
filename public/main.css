@@ -105,12 +105,15 @@ form p {
 }
 
 .comment-box {
-  text-decoration: underline;
   cursor: pointer;
   margin-left: 20px;
 }
 .comment-box summary {
+  text-decoration: underline;
   list-style: none;
   font-size: 0.7em;
 }
 
+form input[type="submit" i] {
+  display: block;
+}
