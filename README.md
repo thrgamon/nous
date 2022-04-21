@@ -5,6 +5,9 @@ Just remembering some commands I always forget.
 `migrate -path db/migrations -database "$DATABASE_URL" up`
 
 ## Todo
-- Search
 - Better error handling
 - Tests
+- Comment improvements
+    - Can't respond to own comment
+    - Can't comments more than once for a thread
+    - Allow voting for comments
