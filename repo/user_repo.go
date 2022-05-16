@@ -38,11 +38,11 @@ func (rr UserRepo) Get(ctx context.Context, authId string) (User, error) {
 	return user, nil
 }
 
-func (rr UserRepo) Exists(ctx context.Context, authId string) (error, bool) {
+func (rr UserRepo) Exists(ctx context.Context, authId string) (bool, error) {
 	var exists bool
 	err := rr.db.QueryRow(ctx, "SELECT EXISTS(select 1 from users where auth_id=$1)", authId).Scan(&exists)
 
-	return err, exists
+	return exists, err
 }
 
 func (rr UserRepo) Add(ctx context.Context, username string, authId string) error {

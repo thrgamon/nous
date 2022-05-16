@@ -51,7 +51,7 @@ func CallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userRepo := repo.NewUserRepo(Db)
-	err, exists := userRepo.Exists(r.Context(), profile.Sub)
+	exists, err := userRepo.Exists(r.Context(), profile.Sub)
 	if err != nil {
 		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
 		Log.Println(err.Error())
