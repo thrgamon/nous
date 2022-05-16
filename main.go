@@ -64,8 +64,6 @@ func main() {
 	r.HandleFunc("/callback", authentication.CallbackHandler)
 	r.HandleFunc("/search", SearchHandler)
 	r.HandleFunc("/view/{resourceId:[0-9]+}", ViewResourceHandler)
-	r.HandleFunc("/resource/{resourceId:[0-9]+}/comment", AddResourceCommentHandler)
-	r.HandleFunc("/resource/{resourceId:[0-9]+}/comment/{parentId:[0-9]+}", AddResourceCommentHandler)
 	r.PathPrefix("/public/").HandlerFunc(serveResource)
 
 	authedRouter := r.NewRoute().Subrouter()
@@ -73,6 +71,8 @@ func main() {
 	authedRouter.HandleFunc("/resource", AddResourceHandler)
 	authedRouter.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
 	authedRouter.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
+	authedRouter.HandleFunc("/resource/{resourceId:[0-9]+}/comment", AddResourceCommentHandler)
+	authedRouter.HandleFunc("/resource/{resourceId:[0-9]+}/comment/{parentId:[0-9]+}", AddResourceCommentHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
