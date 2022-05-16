@@ -24,18 +24,18 @@ func NewUserRepo(db *pgxpool.Pool) *UserRepo {
 	return &repo
 }
 
-func (rr UserRepo) Get(ctx context.Context, authId string) (error, User) {
+func (rr UserRepo) Get(ctx context.Context, authId string) (User, error) {
 	var userId UserID
 	var username string
 	err := rr.db.QueryRow(context.TODO(), "select id, username from users where users.auth_id = $1", authId).Scan(&userId, &username)
 
 	if err != nil {
-		return err, User{}
+		return User{}, err
 	}
 
 	user := User{ID: userId, Username: username, AuthId: authId}
 
-	return nil, user
+	return user, nil
 }
 
 func (rr UserRepo) Exists(ctx context.Context, authId string) (error, bool) {

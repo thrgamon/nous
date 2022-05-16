@@ -332,7 +332,7 @@ func getUserFromSession(r *http.Request) (repo.User, bool) {
 	userId, ok := sessionState.Values["user_id"].(string)
 
 	if ok {
-		_, user := userRepo.Get(r.Context(), userId)
+		user, _ := userRepo.Get(r.Context(), userId)
 		return user, true
 	} else {
 		return repo.User{}, false
