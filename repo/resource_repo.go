@@ -17,7 +17,7 @@ type Resource struct {
 	Name  string
 	Rank  int
 	Voted bool
-  Tags []string
+	Tags  []string
 }
 
 type ResourceRepo struct {
@@ -33,11 +33,11 @@ func NewResourceRepo(db *pgxpool.Pool) *ResourceRepo {
 }
 
 func (rr ResourceRepo) Get(ctx context.Context, id uint, userId UserID) (error, Resource) {
-  var link string
-  var name string
-  var rank int
-  var voted int
-  var tags []string
+	var link string
+	var name string
+	var rank int
+	var voted int
+	var tags []string
 	err := rr.db.QueryRow(
 		ctx,
 		`SELECT
@@ -55,14 +55,14 @@ func (rr ResourceRepo) Get(ctx context.Context, id uint, userId UserID) (error, 
       rank DESC,
       inserted_at;`,
 		userId,
-    id,
-    ).Scan(&link, &name, &rank, &voted, &tags)
+		id,
+	).Scan(&link, &name, &rank, &voted, &tags)
 
 	if err != nil {
 		return err, Resource{}
 	}
 
-  urlLink, err := url.Parse(link)
+	urlLink, err := url.Parse(link)
 
 	if err != nil {
 		return err, Resource{}
@@ -108,27 +108,27 @@ func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, e
 		var tags []string
 		rows.Scan(&id, &link, &name, &rank, &voted, &tags)
 
-    urlLink, err := url.Parse(link)
+		urlLink, err := url.Parse(link)
 
-    if err != nil {
-      return resources, err
-    }
+		if err != nil {
+			return resources, err
+		}
 
-    resources = append(
-      resources, 
-      Resource{
-        ID: uint(id), 
-        Link: *urlLink, 
-        Name: name, 
-        Rank: rank, 
-        Voted: voted == 1,
-        Tags: tags,
-      },
-	  )
-  }
+		resources = append(
+			resources,
+			Resource{
+				ID:    uint(id),
+				Link:  *urlLink,
+				Name:  name,
+				Rank:  rank,
+				Voted: voted == 1,
+				Tags:  tags,
+			},
+		)
+	}
 
 	if err != nil {
-    log.Fatal(err.Error())
+		log.Fatal(err.Error())
 		return resources, err
 	}
 
@@ -136,21 +136,21 @@ func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, e
 }
 
 func (rr ResourceRepo) Add(ctx context.Context, userId UserID, link string, name string, tags string) error {
-  error := rr.withTransaction(ctx, func() error{
-      var resourceId uint
-      err := rr.db.QueryRow(ctx, "INSERT INTO resources (name, link, rank) VALUES ($1, $2, $3) RETURNING id", name, link, 0).Scan(&resourceId)
+	error := rr.withTransaction(ctx, func() error {
+		var resourceId uint
+		err := rr.db.QueryRow(ctx, "INSERT INTO resources (name, link, rank) VALUES ($1, $2, $3) RETURNING id", name, link, 0).Scan(&resourceId)
 
-      splitTags := strings.Split(tags, ",")
+		splitTags := strings.Split(tags, ",")
 
-      for _, string := range splitTags {
-        fmtString := strings.TrimSpace(strings.ToLower(string))
-        rr.db.Exec(ctx, "INSERT INTO tags (user_id, resource_id, tag) VALUES ($1, $2, $3)", userId, resourceId, fmtString)
-  }
+		for _, string := range splitTags {
+			fmtString := strings.TrimSpace(strings.ToLower(string))
+			rr.db.Exec(ctx, "INSERT INTO tags (user_id, resource_id, tag) VALUES ($1, $2, $3)", userId, resourceId, fmtString)
+		}
 
-	return err
-  })
+		return err
+	})
 
-  return error
+	return error
 }
 
 func (rr ResourceRepo) Upvote(ctx context.Context, userId UserID, resourceId uint) error {
@@ -168,7 +168,7 @@ func (rr ResourceRepo) Downvote(ctx context.Context, userId UserID, resourceId u
 func (rr ResourceRepo) Search(ctx context.Context, searchQuery string, userId UserID) ([]Resource, error) {
 	var resources []Resource
 
-  tsquery := strings.Join(strings.Split(searchQuery, " "), " | ")
+	tsquery := strings.Join(strings.Split(searchQuery, " "), " | ")
 
 	rows, err := rr.db.Query(
 		ctx,
@@ -187,8 +187,8 @@ func (rr ResourceRepo) Search(ctx context.Context, searchQuery string, userId Us
     ORDER BY
       rank DESC,
       inserted_at;`,
-    userId,
-	  tsquery,
+		userId,
+		tsquery,
 	)
 	defer rows.Close()
 
@@ -205,51 +205,49 @@ func (rr ResourceRepo) Search(ctx context.Context, searchQuery string, userId Us
 		var tags []string
 		rows.Scan(&id, &link, &name, &rank, &voted, &tags)
 
-    urlLink, err := url.Parse(link)
+		urlLink, err := url.Parse(link)
 
-    if err != nil {
-      return resources, err
-    }
+		if err != nil {
+			return resources, err
+		}
 
-    resources = append(
-      resources, 
-      Resource{
-        ID: uint(id), 
-        Link: *urlLink, 
-        Name: name, 
-        Rank: rank, 
-        Voted: voted == 1,
-        Tags: tags,
-      },
-	  )
-  }
+		resources = append(
+			resources,
+			Resource{
+				ID:    uint(id),
+				Link:  *urlLink,
+				Name:  name,
+				Rank:  rank,
+				Voted: voted == 1,
+				Tags:  tags,
+			},
+		)
+	}
 
 	if err != nil {
-    log.Fatal(err.Error())
+		log.Fatal(err.Error())
 		return resources, err
 	}
 
 	return resources, nil
 }
 
-
-
 func (rr ResourceRepo) withTransaction(ctx context.Context, fn func() error) error {
-  tx, err := rr.db.Begin(ctx)
-  if err != nil {
-      return err
-  }
-  defer tx.Rollback(ctx)
+	tx, err := rr.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
-  err = fn()
-  if err != nil {
-      return err
-  }
+	err = fn()
+	if err != nil {
+		return err
+	}
 
-  err = tx.Commit(ctx)
-  if err != nil {
-      return err
-  }
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
 
-  return nil
+	return nil
 }

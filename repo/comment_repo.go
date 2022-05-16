@@ -3,22 +3,22 @@ package repo
 import (
 	"context"
 	"log"
-  "sort"
+	"sort"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type Comment struct {
-	ID    uint
-	Content  string
-	Username  string
-	ParentId uint
-  ResourceId ResourceID
-  Children []Comment
+	ID         uint
+	Content    string
+	Username   string
+	ParentId   uint
+	ResourceId ResourceID
+	Children   []Comment
 }
 
 type CommentRepo struct {
-	db      *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
 func NewCommentRepo(db *pgxpool.Pool) *CommentRepo {
@@ -28,11 +28,11 @@ func NewCommentRepo(db *pgxpool.Pool) *CommentRepo {
 }
 
 func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) (map[uint][]Comment, error) {
-  commentTree := make(map[uint][]Comment)
+	commentTree := make(map[uint][]Comment)
 
 	rows, err := rr.db.Query(
 		ctx,
-    `WITH RECURSIVE subcomments AS (
+		`WITH RECURSIVE subcomments AS (
       SELECT
         id,
         content,
@@ -80,63 +80,63 @@ func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) (map[uint][]C
 		var resourceId uint
 		rows.Scan(&id, &content, &username, &parentId, &resourceId)
 
-    newComment := Comment{
-        ID: uint(id), 
-        Content: content,
-        Username: username, 
-        ParentId: parentId, 
-        ResourceId: ResourceID(resourceId),
-      }
+		newComment := Comment{
+			ID:         uint(id),
+			Content:    content,
+			Username:   username,
+			ParentId:   parentId,
+			ResourceId: ResourceID(resourceId),
+		}
 
-    // Check to see if there are comments already under this parent root
-    _, parentIdPresent := commentTree[parentId]
+		// Check to see if there are comments already under this parent root
+		_, parentIdPresent := commentTree[parentId]
 
-    // If the parent id is present and it is the root id
-    if parentIdPresent && parentId == 0 {
-      // If there are child comments for this comment, grab them and assign them to this comment
-      children, childrenPresent := commentTree[id]
-      if childrenPresent {
-        newComment.Children = children
-      }
-      // Start an array of child comments, including this comment, under the parent comment
-      commentTree[parentId] = append(commentTree[parentId], newComment)
-      // Delete the child comments key
-      delete(commentTree, id)
-    // If there are comments grouped under the parent comment then start
-    // an array of sibling comments
-    } else if parentIdPresent {
+		// If the parent id is present and it is the root id
+		if parentIdPresent && parentId == 0 {
+			// If there are child comments for this comment, grab them and assign them to this comment
+			children, childrenPresent := commentTree[id]
+			if childrenPresent {
+				newComment.Children = children
+			}
+			// Start an array of child comments, including this comment, under the parent comment
+			commentTree[parentId] = append(commentTree[parentId], newComment)
+			// Delete the child comments key
+			delete(commentTree, id)
+			// If there are comments grouped under the parent comment then start
+			// an array of sibling comments
+		} else if parentIdPresent {
 
-      children, childrenPresent := commentTree[id]
-      // If there are child comments for this comment, grab them and assign them to this comment
-      if childrenPresent {
-        newComment.Children = children
-      }
+			children, childrenPresent := commentTree[id]
+			// If there are child comments for this comment, grab them and assign them to this comment
+			if childrenPresent {
+				newComment.Children = children
+			}
 
-      commentTree[parentId] = append(commentTree[parentId], newComment)
-      // Delete the child comments key
-      delete(commentTree, id)
-    // If there are no comments grouped under the parent comment, then check to 
-    // see if there are child comments for this comment
-    } else {
-      children, childrenPresent := commentTree[id]
-      // If there are child comments for this comment, grab them and assign them to this comment
-      if childrenPresent {
-        newComment.Children = children
-      }
-      // Start an array of child comments, including this comment, under the parent comment
-      commentTree[parentId] = []Comment{newComment}
-      // Delete the child comments key
-      delete(commentTree, id)
-    }
-  }
+			commentTree[parentId] = append(commentTree[parentId], newComment)
+			// Delete the child comments key
+			delete(commentTree, id)
+			// If there are no comments grouped under the parent comment, then check to
+			// see if there are child comments for this comment
+		} else {
+			children, childrenPresent := commentTree[id]
+			// If there are child comments for this comment, grab them and assign them to this comment
+			if childrenPresent {
+				newComment.Children = children
+			}
+			// Start an array of child comments, including this comment, under the parent comment
+			commentTree[parentId] = []Comment{newComment}
+			// Delete the child comments key
+			delete(commentTree, id)
+		}
+	}
 
-  root := commentTree[0]
-  sort.Slice(root, func (i,j int) bool  {
-    return root[i].ID < root[j].ID
-  })
+	root := commentTree[0]
+	sort.Slice(root, func(i, j int) bool {
+		return root[i].ID < root[j].ID
+	})
 
 	if rows.Err() != nil {
-    log.Fatal(rows.Err().Error())
+		log.Fatal(rows.Err().Error())
 		return commentTree, err
 	}
 
@@ -144,14 +144,13 @@ func (rr CommentRepo) GetAll(ctx context.Context, resourceId uint) (map[uint][]C
 }
 
 func (rr CommentRepo) Add(ctx context.Context, userId UserID, resourceId uint, content string) error {
-  _, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, content) VALUES ($1, $2, $3)", userId, resourceId, content)
+	_, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, content) VALUES ($1, $2, $3)", userId, resourceId, content)
 
-  return err
+	return err
 }
 
 func (rr CommentRepo) AddChild(ctx context.Context, userId UserID, resourceId uint, parentId uint, content string) error {
-  _, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, parent_id, content) VALUES ($1, $2, $3, $4)", userId, resourceId, parentId, content)
+	_, err := rr.db.Exec(ctx, "INSERT INTO comments (user_id, resource_id, parent_id, content) VALUES ($1, $2, $3, $4)", userId, resourceId, parentId, content)
 
-  return err
+	return err
 }
-
