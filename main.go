@@ -80,7 +80,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	println("Server listening")
 	Log.Println("Server listening")
 	log.Fatal(srv.ListenAndServe())
 }
