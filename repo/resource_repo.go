@@ -32,7 +32,7 @@ func NewResourceRepo(db *pgxpool.Pool) *ResourceRepo {
 	return &repo
 }
 
-func (rr ResourceRepo) Get(ctx context.Context, id uint, userId UserID) (error, Resource) {
+func (rr ResourceRepo) Get(ctx context.Context, id uint, userId UserID) (Resource, error) {
 	var link string
 	var name string
 	var rank int
@@ -59,18 +59,18 @@ func (rr ResourceRepo) Get(ctx context.Context, id uint, userId UserID) (error, 
 	).Scan(&link, &name, &rank, &voted, &tags)
 
 	if err != nil {
-		return err, Resource{}
+		return Resource{}, err
 	}
 
 	urlLink, err := url.Parse(link)
 
 	if err != nil {
-		return err, Resource{}
+		return Resource{}, err
 	}
 
 	resource := Resource{ID: id, Link: *urlLink, Name: name, Rank: rank, Voted: voted == 1, Tags: tags}
 
-	return nil, resource
+	return resource, nil
 }
 
 func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, error) {

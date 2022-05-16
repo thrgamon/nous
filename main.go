@@ -146,7 +146,7 @@ func ViewResourceHandler(w http.ResponseWriter, r *http.Request) {
 	resourceRepo := repo.NewResourceRepo(Db)
 	commentRepo := repo.NewCommentRepo(Db)
 
-	err, resource := resourceRepo.Get(r.Context(), uint(resourceId), user.ID)
+	resource, err := resourceRepo.Get(r.Context(), uint(resourceId), user.ID)
 	comments, err := commentRepo.GetAll(r.Context(), uint(resourceId))
 
 	if err != nil {
