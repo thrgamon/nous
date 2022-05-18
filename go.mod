@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/jackc/pgx/v4 v4.15.0
-	github.com/thrgamon/learning_rank/env v0.0.0-20220326074626-f444e469fb50
+	github.com/thrgamon/learning_rank/env v0.0.0-20220518123640-583ac654d35b
 	golang.org/x/oauth2 v0.0.0-20220309155454-6242fa91716a
 )
 

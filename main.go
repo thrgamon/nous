@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+  _ "net/http/pprof"
 
 	"github.com/thrgamon/learning_rank/authentication"
 	"github.com/thrgamon/learning_rank/env"
@@ -65,6 +66,7 @@ func main() {
 	r.HandleFunc("/search", SearchHandler)
 	r.HandleFunc("/view/{resourceId:[0-9]+}", ViewResourceHandler)
 	r.PathPrefix("/public/").HandlerFunc(serveResource)
+  r.PathPrefix("/debug/pprof").Handler(http.DefaultServeMux)
 
 	authedRouter := r.NewRoute().Subrouter()
 	authedRouter.Use(ensureAuthed)
