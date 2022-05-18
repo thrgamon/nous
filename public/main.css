@@ -107,6 +107,7 @@ form p {
 .comment-box {
   cursor: pointer;
   margin-left: 20px;
+  margin-bottom: 20px;
 }
 .comment-box summary {
   text-decoration: underline;
@@ -114,6 +115,7 @@ form p {
   font-size: 0.7em;
 }
 
-form input[type="submit" i] {
+.comment input[type="submit" i] {
   display: block;
 }
+
