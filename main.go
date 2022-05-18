@@ -101,9 +101,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	resources, err := resourceRepo.GetAll(r.Context(), user.ID)
 
 	if err != nil {
-		println(err.Error())
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-		Log.Println(err.Error())
+		handleUnexpectedError(w, err)
 		return
 	}
 
@@ -131,8 +129,7 @@ func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
 	err := resourceRepo.Upvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-		Log.Println(err.Error())
+		handleUnexpectedError(w, err)
 		return
 	}
 
@@ -150,10 +147,10 @@ func ViewResourceHandler(w http.ResponseWriter, r *http.Request) {
 	comments, err := commentRepo.GetAll(r.Context(), uint(resourceId))
 
 	if err != nil {
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-		Log.Println(err.Error())
+		handleUnexpectedError(w, err)
 		return
 	}
+
 	pageData := ResourcePageData{Resources: []repo.Resource{resource}, User: user, Comments: comments}
 	RenderTemplate(w, "view", pageData)
 }
@@ -170,8 +167,7 @@ func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
 	err := resourceRepo.Add(r.Context(), user.ID, link, name, tags)
 
 	if err != nil {
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-		Log.Println(err.Error())
+		handleUnexpectedError(w, err)
 		return
 	}
 
@@ -197,8 +193,7 @@ func AddResourceCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-		Log.Println(err.Error())
+		handleUnexpectedError(w, err)
 		return
 	}
 
@@ -214,8 +209,7 @@ func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
 	err := resourceRepo.Downvote(r.Context(), user.ID, uint(resourceId))
 
 	if err != nil {
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-		Log.Println(err.Error())
+		handleUnexpectedError(w, err)
 		return
 	}
 
@@ -232,9 +226,7 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 	resources, err := resourceRepo.Search(r.Context(), query, user.ID)
 
 	if err != nil {
-		println(err.Error())
-		http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-		Log.Println(err.Error())
+		handleUnexpectedError(w, err)
 		return
 	}
 
@@ -251,8 +243,7 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 		err := Templates[tmpl].Execute(w, data)
 
 		if err != nil {
-			http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-			Log.Println(err.Error())
+			handleUnexpectedError(w, err)
 			return
 		}
 	} else {
@@ -260,8 +251,7 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 		err := template.Execute(w, data)
 
 		if err != nil {
-			http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-			Log.Println(err.Error())
+			handleUnexpectedError(w, err)
 			return
 		}
 	}
@@ -349,4 +339,9 @@ func ensureAuthed(next http.Handler) http.Handler {
 			return
 		}
 	})
+}
+
+func handleUnexpectedError(w http.ResponseWriter, err error) {
+	http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
+	Log.Println(err.Error())
 }
