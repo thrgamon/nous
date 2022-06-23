@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -53,6 +52,7 @@ func main() {
 	r.HandleFunc("/search", SearchHandler)
 	r.PathPrefix("/public/").HandlerFunc(serveNote)
 	r.HandleFunc("/note", AddNoteHandler)
+	r.HandleFunc("/note/toggle", ToggleNoteHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
@@ -92,10 +92,10 @@ func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 
 func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	noteId, _ := strconv.ParseUint(vars["noteId"], 10, 64)
+	noteId := vars["noteId"]
 	noteRepo := repo.NewNoteRepo(Db)
 
-	note, err := noteRepo.Get(r.Context(), uint(noteId))
+	note, err := noteRepo.Get(r.Context(), repo.NoteID(noteId))
 
 	if err != nil {
 		handleUnexpectedError(w, err)
@@ -104,6 +104,22 @@ func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	pageData := NotePageData{Notes: []repo.Note{note}}
 	RenderTemplate(w, "view", pageData)
+}
+
+func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	id := r.FormValue("id")
+
+	noteRepo := repo.NewNoteRepo(Db)
+	err := noteRepo.ToggleDone(r.Context(), repo.NoteID(id))
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func AddNoteHandler(w http.ResponseWriter, r *http.Request) {

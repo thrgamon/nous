@@ -98,3 +98,14 @@ form p {
   line-height: 0.7em;
 }
 
+.done {
+  color: lightgrey;
+  text-decoration: line-through;
+}
+
+.note > hr {
+    height: 1px;
+    background-color: whitesmoke;
+    border: none;  
+
+}

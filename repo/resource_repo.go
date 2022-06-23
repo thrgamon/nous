@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"log"
 	"strings"
@@ -10,12 +11,13 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type NoteID uint
+type NoteID string
 
 type Note struct {
-	ID   uint
+	ID   NoteID
 	Body template.HTML
 	Tags []string
+	Done bool
 }
 
 type NoteRepo struct {
@@ -30,7 +32,7 @@ func NewNoteRepo(db *pgxpool.Pool) *NoteRepo {
 	return &repo
 }
 
-func (rr NoteRepo) Get(ctx context.Context, id uint) (Note, error) {
+func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
 	var body string
 	var tags []string
 	err := rr.db.QueryRow(
@@ -70,7 +72,8 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 		`SELECT
       note_search.id,
       body,
-      tags
+      tags,
+      done
     FROM
       note_search
     ORDER BY
@@ -86,7 +89,8 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 		var id int
 		var body string
 		var tags []string
-		rows.Scan(&id, &body, &tags)
+		var done bool
+    err := rows.Scan(&id, &body, &tags, &done)
 
 		if err != nil {
 			return notes, err
@@ -95,9 +99,10 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 		notes = append(
 			notes,
 			Note{
-				ID:   uint(id),
+				ID:   NoteID(fmt.Sprint(id)),
 				Body: template.HTML(markdown.ToHTML([]byte(body), nil, nil)),
 				Tags: tags,
+				Done: done,
 			},
 		)
 	}
@@ -110,9 +115,14 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 	return notes, nil
 }
 
+func (rr NoteRepo) ToggleDone(ctx context.Context, noteId NoteID) error {
+	_, err := rr.db.Exec(ctx, "UPDATE notes SET done = NOT done WHERE id = $1", noteId)
+
+	return err
+}
 func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 	error := rr.withTransaction(ctx, func() error {
-		var noteId uint
+		var noteId NoteID
 		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
 		splitTags := strings.Split(tags, " ")
@@ -138,7 +148,8 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 		`SELECT
       note_search.id,
       body,
-      tags
+      tags,
+      done
     FROM
       note_search
     WHERE
@@ -157,7 +168,8 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 		var id int
 		var body string
 		var tags []string
-		rows.Scan(&id, &body, &tags)
+		var done bool
+    err := rows.Scan(&id, &body, &tags, &done)
 
 		if err != nil {
 			return notes, err
@@ -166,15 +178,15 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 		notes = append(
 			notes,
 			Note{
-				ID:   uint(id),
+				ID:   NoteID(fmt.Sprint(id)),
 				Body: template.HTML(markdown.ToHTML([]byte(body), nil, nil)),
 				Tags: tags,
+        Done: done,
 			},
 		)
 	}
 
 	if err != nil {
-		log.Fatal(err.Error())
 		return notes, err
 	}
 

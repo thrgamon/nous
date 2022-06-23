@@ -6,8 +6,10 @@
   </form>
   <div class="grid-note">
 {{range .Notes}}
-    <div class="note">
+    <div class="note{{if .Done }} done {{end}}">
+      <a name={{.ID}}></a>
     <p> {{.Body}} </p>
+    <hr>
     </div>
   <div class="metadata">
     <ul class="tags text-subdued">
@@ -15,6 +17,10 @@
       <li class="tag">{{.}}</li>
       {{end}}
     </ul>
+      <form action="/note/toggle" method="post">
+        <input type="number" name="id" value="{{.ID}}" hidden/>
+      <input onChange="this.form.submit()" type="checkbox" {{ if .Done}} checked {{end}}>
+      </form>
   </div>
 {{end}}
   </div>
