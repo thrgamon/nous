@@ -27,7 +27,7 @@ const (
 	Development
 )
 
-var Db *pgxpool.Pool
+var DB *pgxpool.Pool
 var Templates map[string]*template.Template
 var Log *log.Logger
 var ENV Environment
@@ -39,8 +39,8 @@ func main() {
 		ENV = Production
 	}
 
-	Db = initDB()
-	defer Db.Close()
+	DB = initDB()
+	defer DB.Close()
 
 	cacheTemplates()
 
@@ -50,7 +50,7 @@ func main() {
 	r.HandleFunc("/", HomeHandler)
 	r.HandleFunc("/submit", SubmitHandler)
 	r.HandleFunc("/search", SearchHandler)
-	r.PathPrefix("/public/").HandlerFunc(serveNote)
+	r.PathPrefix("/public/").HandlerFunc(serveResources)
 	r.HandleFunc("/note", AddNoteHandler)
 	r.HandleFunc("/note/toggle", ToggleNoteHandler)
 
@@ -60,6 +60,7 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+
 	Log.Println("Server listening")
 	log.Fatal(srv.ListenAndServe())
 }
@@ -68,12 +69,8 @@ type PageData struct {
 	Notes []repo.Note
 }
 
-type NotePageData struct {
-	Notes []repo.Note
-}
-
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	noteRepo := repo.NewNoteRepo(Db)
+	noteRepo := repo.NewNoteRepo(DB)
 	notes, err := noteRepo.GetAll(r.Context())
 
 	if err != nil {
@@ -93,8 +90,8 @@ func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	noteId := vars["noteId"]
-	noteRepo := repo.NewNoteRepo(Db)
 
+	noteRepo := repo.NewNoteRepo(DB)
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(noteId))
 
 	if err != nil {
@@ -102,7 +99,7 @@ func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pageData := NotePageData{Notes: []repo.Note{note}}
+	pageData := PageData{Notes: []repo.Note{note}}
 	RenderTemplate(w, "view", pageData)
 }
 
@@ -111,7 +108,7 @@ func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	id := r.FormValue("id")
 
-	noteRepo := repo.NewNoteRepo(Db)
+	noteRepo := repo.NewNoteRepo(DB)
 	err := noteRepo.ToggleDone(r.Context(), repo.NoteID(id))
 
 	if err != nil {
@@ -128,7 +125,7 @@ func AddNoteHandler(w http.ResponseWriter, r *http.Request) {
 	body := r.FormValue("body")
 	tags := r.FormValue("tags")
 
-	noteRepo := repo.NewNoteRepo(Db)
+	noteRepo := repo.NewNoteRepo(DB)
 	err := noteRepo.Add(r.Context(), body, tags)
 
 	if err != nil {
@@ -144,7 +141,7 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.FormValue("query")
 
-	noteRepo := repo.NewNoteRepo(Db)
+	noteRepo := repo.NewNoteRepo(DB)
 	notes, err := noteRepo.Search(r.Context(), query)
 
 	if err != nil {
@@ -219,7 +216,7 @@ func initDB() *pgxpool.Pool {
 
 // Handler for serving static assets with modified time to help
 // caching
-func serveNote(w http.ResponseWriter, r *http.Request) {
+func serveResources(w http.ResponseWriter, r *http.Request) {
 	f, err := os.Open(filepath.Join(".", r.URL.Path))
 	if err != nil {
 		http.Error(w, r.RequestURI, http.StatusNotFound)

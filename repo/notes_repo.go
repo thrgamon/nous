@@ -8,6 +8,7 @@ import (
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -21,15 +22,11 @@ type Note struct {
 }
 
 type NoteRepo struct {
-	storage map[uint]Note
-	db      *pgxpool.Pool
+	db *pgxpool.Pool
 }
 
 func NewNoteRepo(db *pgxpool.Pool) *NoteRepo {
-	var repo NoteRepo
-	repo.storage = make(map[uint]Note)
-	repo.db = db
-	return &repo
+	return &NoteRepo{db: db}
 }
 
 func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
@@ -46,10 +43,6 @@ func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
       note_search.id = $1;`,
 		id,
 	).Scan(&body, &tags)
-
-	if err != nil {
-		return Note{}, err
-	}
 
 	if err != nil {
 		return Note{}, err
@@ -90,7 +83,7 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 		var body string
 		var tags []string
 		var done bool
-    err := rows.Scan(&id, &body, &tags, &done)
+		err := rows.Scan(&id, &body, &tags, &done)
 
 		if err != nil {
 			return notes, err
@@ -118,19 +111,23 @@ func (rr NoteRepo) ToggleDone(ctx context.Context, noteId NoteID) error {
 	_, err := rr.db.Exec(ctx, "UPDATE notes SET done = NOT done WHERE id = $1", noteId)
 	return err
 }
+
 func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 	error := rr.withTransaction(ctx, func() error {
 		var noteId int
 		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
-    if tags != "" {
-      splitTags := strings.Split(strings.TrimSpace(tags), " ")
+		splitTags := strings.Split(strings.TrimSpace(tags), " ")
 
-      for _, string := range splitTags {
-        fmtString := strings.TrimSpace(strings.ToLower(string))
-        rr.db.Exec(ctx, "INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
-      }
-    }
+		batch := &pgx.Batch{}
+
+		for _, string := range splitTags {
+			fmtString := strings.TrimSpace(strings.ToLower(string))
+			batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
+		}
+
+		br := rr.db.SendBatch(ctx, batch)
+		err = br.Close()
 
 		return err
 	})
@@ -169,7 +166,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 		var body string
 		var tags []string
 		var done bool
-    err := rows.Scan(&id, &body, &tags, &done)
+		err := rows.Scan(&id, &body, &tags, &done)
 
 		if err != nil {
 			return notes, err
@@ -181,7 +178,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 				ID:   NoteID(fmt.Sprint(id)),
 				Body: markdownToHtml(body),
 				Tags: tags,
-        Done: done,
+				Done: done,
 			},
 		)
 	}
@@ -214,9 +211,9 @@ func (rr NoteRepo) withTransaction(ctx context.Context, fn func() error) error {
 }
 
 func markdownToHtml(text string) template.HTML {
-  extensions := parser.CommonExtensions | parser.HardLineBreak
-  parser := parser.NewWithExtensions(extensions)
+	extensions := parser.CommonExtensions | parser.HardLineBreak
+	parser := parser.NewWithExtensions(extensions)
 
-  md := []byte(text)
-  return template.HTML(markdown.ToHTML(md, parser, nil))
+	md := []byte(text)
+	return template.HTML(markdown.ToHTML(md, parser, nil))
 }
