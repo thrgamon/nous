@@ -90,12 +90,18 @@ header h1 a {
 
 .grid-note{
       display: grid;
-    grid-template-columns: 3fr 1fr;
+    grid-template-columns: 1fr 5fr 2fr;
 }
 
 form p {
   font-size: 0.8em;
   line-height: 0.7em;
+}
+
+.done-container {
+      display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .done {
@@ -108,4 +114,10 @@ form p {
     background-color: whitesmoke;
     border: none;  
 
+}
+
+.metadata {
+      display: flex;
+    align-items: center;
+    justify-content: center;
 }

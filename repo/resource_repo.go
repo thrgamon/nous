@@ -122,15 +122,17 @@ func (rr NoteRepo) ToggleDone(ctx context.Context, noteId NoteID) error {
 }
 func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 	error := rr.withTransaction(ctx, func() error {
-		var noteId NoteID
+		var noteId int
 		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
-		splitTags := strings.Split(tags, " ")
+    if tags != "" {
+      splitTags := strings.Split(tags, " ")
 
-		for _, string := range splitTags {
-			fmtString := strings.TrimSpace(strings.ToLower(string))
-			rr.db.Exec(ctx, "INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
-		}
+      for _, string := range splitTags {
+        fmtString := strings.TrimSpace(strings.ToLower(string))
+        rr.db.Exec(ctx, "INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
+      }
+    }
 
 		return err
 	})
