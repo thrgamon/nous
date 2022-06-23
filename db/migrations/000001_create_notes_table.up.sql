@@ -1,7 +1,6 @@
-CREATE TABLE "users" (
+CREATE TABLE "notes" (
   "id" SERIAL PRIMARY KEY,
-  "username" text,
-  "auth_id" text,
+  "body" text,
   "inserted_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
   "updated_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

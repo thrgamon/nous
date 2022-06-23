@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
@@ -13,15 +12,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
-  _ "net/http/pprof"
 
-	"github.com/thrgamon/learning_rank/authentication"
 	"github.com/thrgamon/learning_rank/env"
-	"github.com/thrgamon/learning_rank/repo"
+	"github.com/thrgamon/nous/repo"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -33,7 +29,6 @@ const (
 )
 
 var Db *pgxpool.Pool
-var Store *sessions.CookieStore
 var Templates map[string]*template.Template
 var Log *log.Logger
 var ENV Environment
@@ -51,30 +46,13 @@ func main() {
 	cacheTemplates()
 
 	Log = log.New(os.Stdout, "logger: ", log.Lshortfile)
-	Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
-
-	authentication.Store = Store
-	authentication.Db = Db
-	authentication.Log = Log
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler)
 	r.HandleFunc("/submit", SubmitHandler)
-	r.HandleFunc("/login", authentication.LoginHandler)
-	r.HandleFunc("/logout", authentication.Logout)
-	r.HandleFunc("/callback", authentication.CallbackHandler)
 	r.HandleFunc("/search", SearchHandler)
-	r.HandleFunc("/view/{resourceId:[0-9]+}", ViewResourceHandler)
-	r.PathPrefix("/public/").HandlerFunc(serveResource)
-  r.PathPrefix("/debug/pprof").Handler(http.DefaultServeMux)
-
-	authedRouter := r.NewRoute().Subrouter()
-	authedRouter.Use(ensureAuthed)
-	authedRouter.HandleFunc("/resource", AddResourceHandler)
-	authedRouter.HandleFunc("/up/{resourceId:[0-9]+}", UpvoteHandler)
-	authedRouter.HandleFunc("/down/{resourceId:[0-9]+}", DownvoteHandler)
-	authedRouter.HandleFunc("/resource/{resourceId:[0-9]+}/comment", AddResourceCommentHandler)
-	authedRouter.HandleFunc("/resource/{resourceId:[0-9]+}/comment/{parentId:[0-9]+}", AddResourceCommentHandler)
+	r.PathPrefix("/public/").HandlerFunc(serveNote)
+	r.HandleFunc("/note", AddNoteHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
@@ -87,135 +65,62 @@ func main() {
 }
 
 type PageData struct {
-	User      repo.User
-	Resources []repo.Resource
+	Notes []repo.Note
 }
 
-type ResourcePageData struct {
-	User      repo.User
-	Resources []repo.Resource
-	Comments  map[uint][]repo.Comment
+type NotePageData struct {
+	Notes []repo.Note
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	user, _ := getUserFromSession(r)
-	resourceRepo := repo.NewResourceRepo(Db)
-	resources, err := resourceRepo.GetAll(r.Context(), user.ID)
+	noteRepo := repo.NewNoteRepo(Db)
+	notes, err := noteRepo.GetAll(r.Context())
 
 	if err != nil {
 		handleUnexpectedError(w, err)
 		return
 	}
 
-	var pageData PageData
-	pageData = PageData{Resources: resources, User: user}
+	pageData := PageData{Notes: notes}
 
 	RenderTemplate(w, "home", pageData)
 }
 
 func SubmitHandler(w http.ResponseWriter, r *http.Request) {
-	user, _ := getUserFromSession(r)
-
-	var pageData PageData
-	pageData = PageData{User: user}
-
-	RenderTemplate(w, "submit", pageData)
+	RenderTemplate(w, "submit", PageData{})
 }
 
-func UpvoteHandler(w http.ResponseWriter, r *http.Request) {
+func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-	user, _ := getUserFromSession(r)
-	resourceRepo := repo.NewResourceRepo(Db)
+	noteId, _ := strconv.ParseUint(vars["noteId"], 10, 64)
+	noteRepo := repo.NewNoteRepo(Db)
 
-	err := resourceRepo.Upvote(r.Context(), user.ID, uint(resourceId))
+	note, err := noteRepo.Get(r.Context(), uint(noteId))
 
 	if err != nil {
 		handleUnexpectedError(w, err)
 		return
 	}
 
-	http.Redirect(w, r, "/", 303)
-}
-
-func ViewResourceHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-	user, _ := getUserFromSession(r)
-	resourceRepo := repo.NewResourceRepo(Db)
-	commentRepo := repo.NewCommentRepo(Db)
-
-	resource, err := resourceRepo.Get(r.Context(), uint(resourceId), user.ID)
-	comments, err := commentRepo.GetAll(r.Context(), uint(resourceId))
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	pageData := ResourcePageData{Resources: []repo.Resource{resource}, User: user, Comments: comments}
+	pageData := NotePageData{Notes: []repo.Note{note}}
 	RenderTemplate(w, "view", pageData)
 }
 
-func AddResourceHandler(w http.ResponseWriter, r *http.Request) {
+func AddNoteHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	name := r.FormValue("name")
-	link := r.FormValue("link")
+	body := r.FormValue("body")
 	tags := r.FormValue("tags")
 
-	resourceRepo := repo.NewResourceRepo(Db)
-	user, _ := getUserFromSession(r)
-	err := resourceRepo.Add(r.Context(), user.ID, link, name, tags)
+	noteRepo := repo.NewNoteRepo(Db)
+	err := noteRepo.Add(r.Context(), body, tags)
 
 	if err != nil {
 		handleUnexpectedError(w, err)
 		return
 	}
 
-	http.Redirect(w, r, "/", 303)
-}
-
-func AddResourceCommentHandler(w http.ResponseWriter, r *http.Request) {
-	commentRepo := repo.NewCommentRepo(Db)
-	user, _ := getUserFromSession(r)
-
-	vars := mux.Vars(r)
-	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-	parentId, _ := strconv.ParseUint(vars["parentId"], 10, 64)
-
-	r.ParseForm()
-	content := r.FormValue("content")
-
-	var err error
-	if parentId == 0 {
-		err = commentRepo.Add(r.Context(), user.ID, uint(resourceId), content)
-	} else {
-		err = commentRepo.AddChild(r.Context(), user.ID, uint(resourceId), uint(parentId), content)
-	}
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	http.Redirect(w, r, "/view/"+vars["resourceId"]+"#"+fmt.Sprint(parentId), 303)
-}
-
-func DownvoteHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	resourceId, _ := strconv.ParseUint(vars["resourceId"], 10, 64)
-	user, _ := getUserFromSession(r)
-	resourceRepo := repo.NewResourceRepo(Db)
-
-	err := resourceRepo.Downvote(r.Context(), user.ID, uint(resourceId))
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	http.Redirect(w, r, "/", 303)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func SearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -223,17 +128,15 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.FormValue("query")
 
-	user, _ := getUserFromSession(r)
-	resourceRepo := repo.NewResourceRepo(Db)
-	resources, err := resourceRepo.Search(r.Context(), query, user.ID)
+	noteRepo := repo.NewNoteRepo(Db)
+	notes, err := noteRepo.Search(r.Context(), query)
 
 	if err != nil {
 		handleUnexpectedError(w, err)
 		return
 	}
 
-	var pageData PageData
-	pageData = PageData{Resources: resources, User: user}
+	pageData := PageData{Notes: notes}
 
 	RenderTemplate(w, "home", pageData)
 }
@@ -300,7 +203,7 @@ func initDB() *pgxpool.Pool {
 
 // Handler for serving static assets with modified time to help
 // caching
-func serveResource(w http.ResponseWriter, r *http.Request) {
+func serveNote(w http.ResponseWriter, r *http.Request) {
 	f, err := os.Open(filepath.Join(".", r.URL.Path))
 	if err != nil {
 		http.Error(w, r.RequestURI, http.StatusNotFound)
@@ -316,31 +219,6 @@ func serveResource(w http.ResponseWriter, r *http.Request) {
 	modTime := fi.ModTime()
 
 	http.ServeContent(w, r, r.URL.Path, modTime, f)
-}
-
-func getUserFromSession(r *http.Request) (repo.User, bool) {
-	sessionState, _ := Store.Get(r, "auth")
-	userRepo := repo.NewUserRepo(Db)
-	userId, ok := sessionState.Values["user_id"].(string)
-
-	if ok {
-		user, _ := userRepo.Get(r.Context(), userId)
-		return user, true
-	} else {
-		return repo.User{}, false
-	}
-}
-
-func ensureAuthed(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, ok := getUserFromSession(r)
-		if ok {
-			next.ServeHTTP(w, r)
-		} else {
-			http.Error(w, "User not authorised to perform this action", http.StatusUnauthorized)
-			return
-		}
-	})
 }
 
 func handleUnexpectedError(w http.ResponseWriter, err error) {

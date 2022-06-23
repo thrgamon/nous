@@ -1,1 +1,0 @@
-ALTER TABLE resources ALTER rank SET DEFAULT 0;

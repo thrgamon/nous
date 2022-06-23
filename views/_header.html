@@ -8,13 +8,13 @@
 
     <title>Learning Rank</title>
 
-    <meta name="description" content="A simple site for finding the best learning resources.">
+    <meta name="description" content="A simple site for finding the best learning notes.">
     <meta name="author" content="Tom Gamon">
 
     <meta property="og:title" content="Learning Rank">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://rank.tomgamon.xyz">
-    <meta property="og:description" content="A simple site for finding the best learning resources.">
+    <meta property="og:description" content="A simple site for finding the best learning notes.">
     <!-- <meta property="og:image" content="image.png"> -->
 
     <link rel="stylesheet" href="/public/main.css">
@@ -27,8 +27,10 @@
     <header>
       <h1><a href="/">Learning Rank</a></h1>
       <nav>
-        <a href="/submit">Submit</a>
-        {{ if not .User.Username }} <a href="/login">login</a> {{else}} <a href="/logout">logout</a> {{end}}
+  <form action="/search" method="post">
+    <input type="text" name="query" required placeholder="search">
+    <input type="submit" value="Search">
+  </form>
       </nav>
     </header>
 {{ end }}

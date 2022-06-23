@@ -2,149 +2,124 @@ package repo
 
 import (
 	"context"
+	"html/template"
 	"log"
-	"net/url"
 	"strings"
 
+	"github.com/gomarkdown/markdown"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type ResourceID uint
+type NoteID uint
 
-type Resource struct {
-	ID    uint
-	Link  url.URL
-	Name  string
-	Rank  int
-	Voted bool
-	Tags  []string
+type Note struct {
+	ID   uint
+	Body template.HTML
+	Tags []string
 }
 
-type ResourceRepo struct {
-	storage map[uint]Resource
+type NoteRepo struct {
+	storage map[uint]Note
 	db      *pgxpool.Pool
 }
 
-func NewResourceRepo(db *pgxpool.Pool) *ResourceRepo {
-	var repo ResourceRepo
-	repo.storage = make(map[uint]Resource)
+func NewNoteRepo(db *pgxpool.Pool) *NoteRepo {
+	var repo NoteRepo
+	repo.storage = make(map[uint]Note)
 	repo.db = db
 	return &repo
 }
 
-func (rr ResourceRepo) Get(ctx context.Context, id uint, userId UserID) (Resource, error) {
-	var link string
-	var name string
-	var rank int
-	var voted int
+func (rr NoteRepo) Get(ctx context.Context, id uint) (Note, error) {
+	var body string
 	var tags []string
 	err := rr.db.QueryRow(
 		ctx,
 		`SELECT
-      link,
-      name,
-      rank,
-      CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted,
+      body,
       tags
     FROM
-      resource_search
-      LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
+      note_search
     WHERE
-      resource_search.id = $2
-    ORDER BY
-      rank DESC,
-      inserted_at;`,
-		userId,
+      note_search.id = $1;`,
 		id,
-	).Scan(&link, &name, &rank, &voted, &tags)
+	).Scan(&body, &tags)
 
 	if err != nil {
-		return Resource{}, err
+		return Note{}, err
 	}
-
-	urlLink, err := url.Parse(link)
 
 	if err != nil {
-		return Resource{}, err
+		return Note{}, err
 	}
 
-	resource := Resource{ID: id, Link: *urlLink, Name: name, Rank: rank, Voted: voted == 1, Tags: tags}
+	note := Note{
+		ID:   id,
+		Body: template.HTML(markdown.ToHTML([]byte(body), nil, nil)),
+		Tags: tags,
+	}
 
-	return resource, nil
+	return note, nil
 }
 
-func (rr ResourceRepo) GetAll(ctx context.Context, userId UserID) ([]Resource, error) {
-	var resources []Resource
+func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
+	var notes []Note
 
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      resource_search.id,
-      link,
-      name,
-      rank,
-      CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted,
+      note_search.id,
+      body,
       tags
     FROM
-      resource_search
-      LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
+      note_search
     ORDER BY
-      rank DESC,
-      inserted_at;`,
-		userId,
+      note_search.id DESC`,
 	)
 	defer rows.Close()
 
 	if err != nil {
-		return resources, err
+		return notes, err
 	}
 
 	for rows.Next() {
 		var id int
-		var link string
-		var name string
-		var rank int
-		var voted int
+		var body string
 		var tags []string
-		rows.Scan(&id, &link, &name, &rank, &voted, &tags)
-
-		urlLink, err := url.Parse(link)
+		rows.Scan(&id, &body, &tags)
 
 		if err != nil {
-			return resources, err
+			return notes, err
 		}
 
-		resources = append(
-			resources,
-			Resource{
-				ID:    uint(id),
-				Link:  *urlLink,
-				Name:  name,
-				Rank:  rank,
-				Voted: voted == 1,
-				Tags:  tags,
+		notes = append(
+			notes,
+			Note{
+				ID:   uint(id),
+				Body: template.HTML(markdown.ToHTML([]byte(body), nil, nil)),
+				Tags: tags,
 			},
 		)
 	}
 
 	if err != nil {
 		log.Fatal(err.Error())
-		return resources, err
+		return notes, err
 	}
 
-	return resources, nil
+	return notes, nil
 }
 
-func (rr ResourceRepo) Add(ctx context.Context, userId UserID, link string, name string, tags string) error {
+func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 	error := rr.withTransaction(ctx, func() error {
-		var resourceId uint
-		err := rr.db.QueryRow(ctx, "INSERT INTO resources (name, link, rank) VALUES ($1, $2, $3) RETURNING id", name, link, 0).Scan(&resourceId)
+		var noteId uint
+		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
-		splitTags := strings.Split(tags, ",")
+		splitTags := strings.Split(tags, " ")
 
 		for _, string := range splitTags {
 			fmtString := strings.TrimSpace(strings.ToLower(string))
-			rr.db.Exec(ctx, "INSERT INTO tags (user_id, resource_id, tag) VALUES ($1, $2, $3)", userId, resourceId, fmtString)
+			rr.db.Exec(ctx, "INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
 		}
 
 		return err
@@ -153,86 +128,60 @@ func (rr ResourceRepo) Add(ctx context.Context, userId UserID, link string, name
 	return error
 }
 
-func (rr ResourceRepo) Upvote(ctx context.Context, userId UserID, resourceId uint) error {
-	_, err := rr.db.Exec(ctx, "INSERT INTO votes (user_id, resource_id) VALUES ($1, $2)", userId, resourceId)
-
-	return err
-}
-
-func (rr ResourceRepo) Downvote(ctx context.Context, userId UserID, resourceId uint) error {
-	_, err := rr.db.Exec(ctx, "DELETE FROM votes where user_id=$1 AND resource_id=$2", userId, resourceId)
-
-	return err
-}
-
-func (rr ResourceRepo) Search(ctx context.Context, searchQuery string, userId UserID) ([]Resource, error) {
-	var resources []Resource
+func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, error) {
+	var notes []Note
 
 	tsquery := strings.Join(strings.Split(searchQuery, " "), " | ")
 
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      resource_search.id,
-      link,
-      name,
-      rank,
-	    CASE WHEN votes.id IS NULL THEN 0 ELSE 1 END uservoted,
+      note_search.id,
+      body,
       tags
     FROM
-      resource_search
-      LEFT JOIN votes on votes.resource_id = resource_search.id AND votes.user_id = $1
+      note_search
     WHERE
-       resource_search.doc @@ to_tsquery($2)
+       note_search.doc @@ to_tsquery($1)
     ORDER BY
-      rank DESC,
-      inserted_at;`,
-		userId,
+      note_search.id DESC`,
 		tsquery,
 	)
 	defer rows.Close()
 
 	if err != nil {
-		return resources, err
+		return notes, err
 	}
 
 	for rows.Next() {
 		var id int
-		var link string
-		var name string
-		var rank int
-		var voted int
+		var body string
 		var tags []string
-		rows.Scan(&id, &link, &name, &rank, &voted, &tags)
-
-		urlLink, err := url.Parse(link)
+		rows.Scan(&id, &body, &tags)
 
 		if err != nil {
-			return resources, err
+			return notes, err
 		}
 
-		resources = append(
-			resources,
-			Resource{
-				ID:    uint(id),
-				Link:  *urlLink,
-				Name:  name,
-				Rank:  rank,
-				Voted: voted == 1,
-				Tags:  tags,
+		notes = append(
+			notes,
+			Note{
+				ID:   uint(id),
+				Body: template.HTML(markdown.ToHTML([]byte(body), nil, nil)),
+				Tags: tags,
 			},
 		)
 	}
 
 	if err != nil {
 		log.Fatal(err.Error())
-		return resources, err
+		return notes, err
 	}
 
-	return resources, nil
+	return notes, nil
 }
 
-func (rr ResourceRepo) withTransaction(ctx context.Context, fn func() error) error {
+func (rr NoteRepo) withTransaction(ctx context.Context, fn func() error) error {
 	tx, err := rr.db.Begin(ctx)
 	if err != nil {
 		return err
