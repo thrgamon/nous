@@ -126,7 +126,7 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
     if tags != "" {
-      splitTags := strings.Split(tags, " ")
+      splitTags := strings.Split(strings.TrimSpace(tags), " ")
 
       for _, string := range splitTags {
         fmtString := strings.TrimSpace(strings.ToLower(string))
