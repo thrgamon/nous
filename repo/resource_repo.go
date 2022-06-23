@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	"log"
 	"strings"
 
 	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/parser"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -100,7 +100,7 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 			notes,
 			Note{
 				ID:   NoteID(fmt.Sprint(id)),
-				Body: template.HTML(markdown.ToHTML([]byte(body), nil, nil)),
+				Body: markdownToHtml(body),
 				Tags: tags,
 				Done: done,
 			},
@@ -108,7 +108,6 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 	}
 
 	if err != nil {
-		log.Fatal(err.Error())
 		return notes, err
 	}
 
@@ -117,7 +116,6 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 
 func (rr NoteRepo) ToggleDone(ctx context.Context, noteId NoteID) error {
 	_, err := rr.db.Exec(ctx, "UPDATE notes SET done = NOT done WHERE id = $1", noteId)
-
 	return err
 }
 func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
@@ -181,7 +179,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 			notes,
 			Note{
 				ID:   NoteID(fmt.Sprint(id)),
-				Body: template.HTML(markdown.ToHTML([]byte(body), nil, nil)),
+				Body: markdownToHtml(body),
 				Tags: tags,
         Done: done,
 			},
@@ -213,4 +211,12 @@ func (rr NoteRepo) withTransaction(ctx context.Context, fn func() error) error {
 	}
 
 	return nil
+}
+
+func markdownToHtml(text string) template.HTML {
+  extensions := parser.CommonExtensions | parser.HardLineBreak
+  parser := parser.NewWithExtensions(extensions)
+
+  md := []byte(text)
+  return template.HTML(markdown.ToHTML(md, parser, nil))
 }

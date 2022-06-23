@@ -119,7 +119,7 @@ func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/#"+id, http.StatusSeeOther)
 }
 
 func AddNoteHandler(w http.ResponseWriter, r *http.Request) {
