@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"strings"
+	"time"
 
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
@@ -57,20 +58,24 @@ func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
 	return note, nil
 }
 
-func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
+func (rr NoteRepo) GetAllSince(ctx context.Context, t time.Time) ([]Note, error) {
 	var notes []Note
-
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
       note_search.id,
       body,
       tags,
-      done
+      done,
+      inserted_at
     FROM
       note_search
+    WHERE
+      inserted_at BETWEEN $1 AND $2
     ORDER BY
       note_search.id DESC`,
+		startOfDay(t),
+		endOfDay(t),
 	)
 	defer rows.Close()
 
@@ -83,7 +88,8 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 		var body string
 		var tags []string
 		var done bool
-		err := rows.Scan(&id, &body, &tags, &done)
+		var insertedAt time.Time
+		err := rows.Scan(&id, &body, &tags, &done, &insertedAt)
 
 		if err != nil {
 			return notes, err
@@ -110,6 +116,19 @@ func (rr NoteRepo) GetAll(ctx context.Context) ([]Note, error) {
 func (rr NoteRepo) ToggleDone(ctx context.Context, noteId NoteID) error {
 	_, err := rr.db.Exec(ctx, "UPDATE notes SET done = NOT done WHERE id = $1", noteId)
 	return err
+}
+
+func (rr NoteRepo) Delete(ctx context.Context, noteId NoteID) error {
+	error := rr.withTransaction(ctx, func() error {
+		_, err := rr.db.Exec(ctx, "DELETE FROM tags WHERE note_id = $1", noteId)
+		if err != nil {
+			return err
+		}
+
+		_, err = rr.db.Exec(ctx, "DELETE FROM notes WHERE id = $1", noteId)
+		return err
+	})
+	return error
 }
 
 func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
@@ -216,4 +235,16 @@ func markdownToHtml(text string) template.HTML {
 
 	md := []byte(text)
 	return template.HTML(markdown.ToHTML(md, parser, nil))
+}
+
+func startOfDay(t time.Time) time.Time {
+	melbourne, _ := time.LoadLocation("Australia/Melbourne")
+	year, month, day := t.Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, melbourne)
+}
+
+func endOfDay(t time.Time) time.Time {
+	melbourne, _ := time.LoadLocation("Australia/Melbourne")
+	year, month, day := t.Date()
+	return time.Date(year, month, day, 23, 59, 59, 0, melbourne)
 }

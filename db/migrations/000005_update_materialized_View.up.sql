@@ -5,6 +5,7 @@ SELECT
 	notes.body,
 	ARRAY_AGG(DISTINCT tags.tag) AS tags,
   notes.done,
+  notes.inserted_at as inserted_at,
 	to_tsvector(notes.body || ' '  || string_agg(tags.tag, ' ')) AS doc
 FROM
 	notes

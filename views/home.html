@@ -1,23 +1,22 @@
-  {{template "header" .}}
-  <form class="submit" action="/note" method="post">
-    <textarea type="text" name="body" required autofocus></textarea>
-    <input type="text" name="tags" placeholder="use space 'seperated values'" required>
-    <input type="submit" value="Submit">
-  </form>
-  <div class="grid-note">
-{{range .Notes}}
-    <div class="done-container">
-            <form action="/note/toggle" method="post">
-        <input type="number" name="id" value="{{.ID}}" hidden/>
+{{template "header" .}}
+<form class="submit" action="/note" method="post">
+  <textarea type="text" name="body" required autofocus></textarea>
+  <input type="text" name="tags" placeholder="use space 'seperated values'" required>
+  <input type="submit" value="Submit">
+</form>
+<div class="grid-note">
+  {{range .Notes}}
+  <div class="flex-center">
+    <form action="/note/toggle" method="post">
+      <input type="number" name="id" value="{{.ID}}" hidden/>
       <input onChange="this.form.submit()" type="checkbox" {{ if .Done}} checked {{end}}>
-      </form>
-
-    </div>
-    <div class="note{{if .Done }} done {{end}}">
-      <a name={{.ID}}></a>
+    </form>
+  </div>
+  <div class="note{{if .Done }} done {{end}}">
+    <a name={{.ID}}></a>
     <p> {{.Body}} </p>
     <hr>
-    </div>
+  </div>
   <div class="metadata">
     <ul class="tags text-subdued">
       {{ range .Tags }} 
@@ -25,6 +24,9 @@
       {{end}}
     </ul>
   </div>
-{{end}}
+  <div class="flex-center">
+    <a href="/note/{{.ID}}/delete">delete</a>
   </div>
+  {{end}}
+</div>
 {{template "footer" .}}

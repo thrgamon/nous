@@ -90,7 +90,7 @@ header h1 a {
 
 .grid-note{
       display: grid;
-    grid-template-columns: 1fr 5fr 2fr;
+    grid-template-columns: 1fr 5fr 2fr 1fr;
 }
 
 form p {
@@ -98,7 +98,7 @@ form p {
   line-height: 0.7em;
 }
 
-.done-container {
+.flex-center{
       display: flex;
     align-items: center;
     justify-content: center;

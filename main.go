@@ -48,10 +48,12 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", HomeHandler)
+  r.HandleFunc("/t/{date}", HomeSinceHandler)
 	r.HandleFunc("/submit", SubmitHandler)
 	r.HandleFunc("/search", SearchHandler)
 	r.PathPrefix("/public/").HandlerFunc(serveResources)
 	r.HandleFunc("/note", AddNoteHandler)
+	r.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
 	r.HandleFunc("/note/toggle", ToggleNoteHandler)
 
 	srv := &http.Server{
@@ -69,9 +71,33 @@ type PageData struct {
 	Notes []repo.Note
 }
 
+func HomeSinceHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	date := vars["date"]
+
+  parsedTime, err := time.Parse(time.RFC3339, date+"T00:00:00+11:00")
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	noteRepo := repo.NewNoteRepo(DB)
+	notes, err := noteRepo.GetAllSince(r.Context(), parsedTime)
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	pageData := PageData{Notes: notes}
+
+	RenderTemplate(w, "home", pageData)
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	noteRepo := repo.NewNoteRepo(DB)
-	notes, err := noteRepo.GetAll(r.Context())
+	notes, err := noteRepo.GetAllSince(r.Context(), time.Now())
 
 	if err != nil {
 		handleUnexpectedError(w, err)
@@ -117,6 +143,21 @@ func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/#"+id, http.StatusSeeOther)
+}
+
+func DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	noteRepo := repo.NewNoteRepo(DB)
+	err := noteRepo.Delete(r.Context(), repo.NoteID(id))
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func AddNoteHandler(w http.ResponseWriter, r *http.Request) {
