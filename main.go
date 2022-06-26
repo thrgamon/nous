@@ -12,11 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thrgamon/learning_rank/env"
+	"github.com/thrgamon/go-utils/env"
+	urepo "github.com/thrgamon/go-utils/repo/user"
+	"github.com/thrgamon/go-utils/web/authentication"
 	"github.com/thrgamon/nous/repo"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -29,7 +32,8 @@ const (
 
 var DB *pgxpool.Pool
 var Templates map[string]*template.Template
-var Log *log.Logger
+var Logger *log.Logger
+var Store *sessions.CookieStore
 var ENV Environment
 
 func main() {
@@ -44,17 +48,28 @@ func main() {
 
 	cacheTemplates()
 
-	Log = log.New(os.Stdout, "logger: ", log.Lshortfile)
+	Logger = log.New(os.Stdout, "logger: ", log.Lshortfile)
+
+	Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+	authentication.Logger = Logger
+	authentication.UserRepo = urepo.NewUserRepo(DB)
+	authentication.Store = Store 
 
 	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler)
-  r.HandleFunc("/t/{date}", HomeSinceHandler)
-	r.HandleFunc("/submit", SubmitHandler)
-	r.HandleFunc("/search", SearchHandler)
-	r.PathPrefix("/public/").HandlerFunc(serveResources)
-	r.HandleFunc("/note", AddNoteHandler)
-	r.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
-	r.HandleFunc("/note/toggle", ToggleNoteHandler)
+	r.HandleFunc("/login", authentication.LoginHandler)
+	r.HandleFunc("/logout", authentication.Logout)
+	r.HandleFunc("/callback", authentication.CallbackHandler)
+  authedRouter := r.NewRoute().Subrouter()
+	authedRouter.Use(ensureAuthed)
+	authedRouter.HandleFunc("/", HomeHandler)
+
+	authedRouter.HandleFunc("/t/{date}", HomeSinceHandler)
+	authedRouter.HandleFunc("/submit", SubmitHandler)
+	authedRouter.HandleFunc("/search", SearchHandler)
+	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
+	authedRouter.HandleFunc("/note", AddNoteHandler)
+	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
+	authedRouter.HandleFunc("/note/toggle", ToggleNoteHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
@@ -63,7 +78,7 @@ func main() {
 		ReadTimeout:  15 * time.Second,
 	}
 
-	Log.Println("Server listening")
+	Logger.Println("Server listening")
 	log.Fatal(srv.ListenAndServe())
 }
 
@@ -75,7 +90,7 @@ func HomeSinceHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	date := vars["date"]
 
-  parsedTime, err := time.Parse(time.RFC3339, date+"T00:00:00+11:00")
+	parsedTime, err := time.Parse(time.RFC3339, date+"T00:00:00+11:00")
 
 	if err != nil {
 		handleUnexpectedError(w, err)
@@ -277,5 +292,34 @@ func serveResources(w http.ResponseWriter, r *http.Request) {
 
 func handleUnexpectedError(w http.ResponseWriter, err error) {
 	http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-	Log.Println(err.Error())
+	Logger.Println(err.Error())
+}
+
+func getUserFromSession(r *http.Request) (urepo.User, bool) {
+	sessionState, err := Store.Get(r, "auth")
+  if err !=  nil {
+    println(err.Error())
+  }
+	userRepo := urepo.NewUserRepo(DB)
+	userId, ok := sessionState.Values["user_id"].(string)
+  Logger.Printf("%v", sessionState.Values)
+
+	if ok {
+		user, _ := userRepo.Get(r.Context(), urepo.Auth0ID(userId))
+		return user, true
+	} else {
+		return urepo.User{}, false
+	}
+}
+
+func ensureAuthed(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, ok := getUserFromSession(r)
+		if ok {
+			next.ServeHTTP(w, r)
+		} else {
+	    http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+			return
+		}
+	})
 }
