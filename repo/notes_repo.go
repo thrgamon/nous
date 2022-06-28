@@ -136,19 +136,22 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 		var noteId int
 		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
-		splitTags := strings.Split(strings.TrimSpace(tags), " ")
+    if tags != "" {
+      splitTags := strings.Split(strings.TrimSpace(tags), ",")
 
-		batch := &pgx.Batch{}
+      batch := &pgx.Batch{}
 
-		for _, string := range splitTags {
-			fmtString := strings.TrimSpace(strings.ToLower(string))
-			batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
-		}
+      for _, string := range splitTags {
+        fmtString := strings.TrimSpace(strings.ToLower(string))
+        batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
+      }
 
-		br := rr.db.SendBatch(ctx, batch)
-		err = br.Close()
+      br := rr.db.SendBatch(ctx, batch)
+      err = br.Close()
 
-		return err
+      return err
+    }
+    return nil
 	})
 
 	return error
