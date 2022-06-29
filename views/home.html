@@ -4,6 +4,8 @@
   <input type="text" name="tags" placeholder="use comma 'seperated values'">
   <input type="submit" value="Submit">
 </form>
+<a href="/t/{{.PreviousDay}}">Previous Day</a>
+{{if .NextDay}}<a href="/t/{{.NextDay}}">Next Day</a>{{end}}
 <div class="grid-note">
   {{range .Notes}}
   <div class="flex-center">

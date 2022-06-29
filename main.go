@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
@@ -63,7 +64,7 @@ func main() {
 	authedRouter.Use(ensureAuthed)
 	authedRouter.HandleFunc("/", HomeHandler)
 
-	authedRouter.HandleFunc("/t/{date}", HomeSinceHandler)
+	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/submit", SubmitHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
 	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
@@ -84,42 +85,74 @@ func main() {
 
 type PageData struct {
 	Notes []repo.Note
+  PreviousDay string
+  NextDay string
 }
 
-func HomeSinceHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	date := vars["date"]
+type IsoDate struct {
+  t time.Time
+}
 
-	parsedTime, err := time.Parse(time.RFC3339, date+"T00:00:00+11:00")
+func newIsoDateFromString(isoString string) (*IsoDate, error){
+  parsedTime, err := time.Parse(time.RFC3339, isoString+"T00:00:00+11:00")
 
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
+  if err != nil {
+    return nil, err
+  }
 
-	noteRepo := repo.NewNoteRepo(DB)
-	notes, err := noteRepo.GetAllSince(r.Context(), parsedTime)
+  return &IsoDate{parsedTime}, nil
+}
 
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
+func newIsoDate() *IsoDate{
+  return &IsoDate{time.Now()}
+}
 
-	pageData := PageData{Notes: notes}
+func (isoDate *IsoDate) stringify()  string {
+  return fmt.Sprintf("%d-%02d-%02d", isoDate.t.Year(), int(isoDate.t.Month()), isoDate.t.Day())
+}
 
-	RenderTemplate(w, "home", pageData)
+func (isoDate *IsoDate) nextDay() *IsoDate {
+  return &IsoDate{isoDate.t.AddDate(0,0,1)}
+}
+
+func (isoDate *IsoDate) previousDay() *IsoDate {
+  return &IsoDate{isoDate.t.AddDate(0,0,-1)}
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	date, ok := vars["date"]
+  t := newIsoDate()
+  var nextDay *IsoDate
+
+  if ok {
+    isoDate, err := newIsoDateFromString(date)
+
+    if err != nil {
+      handleUnexpectedError(w, err)
+      return
+    }
+
+    t = isoDate
+    nextDay = isoDate.nextDay()
+  }
+  previousDay := t.previousDay()
+
+
 	noteRepo := repo.NewNoteRepo(DB)
-	notes, err := noteRepo.GetAllSince(r.Context(), time.Now())
+	notes, err := noteRepo.GetAllSince(r.Context(), t.t)
 
 	if err != nil {
 		handleUnexpectedError(w, err)
 		return
 	}
 
-	pageData := PageData{Notes: notes}
+  var pageData PageData
+  if nextDay == nil {
+    pageData = PageData{Notes: notes, PreviousDay: previousDay.stringify()}
+  } else {
+    pageData = PageData{Notes: notes, PreviousDay: previousDay.stringify(), NextDay: nextDay.stringify()}
+  }
 
 	RenderTemplate(w, "home", pageData)
 }
