@@ -91,6 +91,11 @@ header h1 a {
 .grid-note{
       display: grid;
     grid-template-columns: 1fr 5fr 2fr 1fr;
+  word-wrap: break-word;
+}
+
+.note {
+  max-width: 450px;
 }
 
 form p {
@@ -120,4 +125,14 @@ form p {
       display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.prev-next {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1em;
+}
+
+.prev-next > a {
+  text-decoration: none;
 }
