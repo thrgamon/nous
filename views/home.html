@@ -13,10 +13,10 @@
   <div class="flex-center">
     <form action="/note/toggle" method="post">
       <input type="number" name="id" value="{{.ID}}" hidden/>
-      <input onChange="this.form.submit()" type="checkbox" {{ if .Done}} checked {{end}}>
+      <input name="done" value="{{.ID}}" type="checkbox" {{ if .Done}} checked {{end}}>
     </form>
   </div>
-  <div class="note{{if .Done }} done {{end}}">
+  <div class="note{{if .Done }} done {{end}}" data-id="{{.ID}}">
     <a name={{.ID}}></a>
     <p> {{.Body}} </p>
     <hr>

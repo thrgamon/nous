@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -71,6 +72,7 @@ func main() {
 	authedRouter.HandleFunc("/note", AddNoteHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
 	authedRouter.HandleFunc("/note/toggle", ToggleNoteHandler)
+	authedRouter.HandleFunc("/api/done", ApiToggleNoteHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
@@ -191,6 +193,30 @@ func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/#"+id, http.StatusSeeOther)
+}
+
+type DoneApiPayload struct {
+  Id string
+}
+
+func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
+  var payload DoneApiPayload
+  
+  err := json.NewDecoder(r.Body).Decode(&payload)
+  if err != nil {
+      http.Error(w, err.Error(), http.StatusBadRequest)
+      return
+  }
+
+	noteRepo := repo.NewNoteRepo(DB)
+	err = noteRepo.ToggleDone(r.Context(), repo.NoteID(payload.Id))
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+  
+  w.WriteHeader(http.StatusOK)
 }
 
 func DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
