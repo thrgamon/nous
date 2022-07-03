@@ -18,7 +18,9 @@
   </div>
   <div class="note{{if .Done }} done {{end}}" data-id="{{.ID}}">
     <a name={{.ID}}></a>
-    <p> {{.Body}} </p>
+    <div data-note-content>
+      {{.Body}}
+    </div>
     <hr>
   </div>
   <div class="metadata">
