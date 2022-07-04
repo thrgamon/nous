@@ -18,6 +18,7 @@ type NoteID string
 type Note struct {
 	ID   NoteID
 	Body template.HTML
+  BodyRaw string
 	Tags []string
 	Done bool
 }
@@ -100,6 +101,7 @@ func (rr NoteRepo) GetAllSince(ctx context.Context, t time.Time) ([]Note, error)
 			Note{
 				ID:   NoteID(fmt.Sprint(id)),
 				Body: markdownToHtml(body),
+        BodyRaw: body,
 				Tags: tags,
 				Done: done,
 			},
@@ -136,6 +138,10 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 		var noteId int
 		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
+    if err != nil {
+      return err
+    }
+
     if tags != "" {
       splitTags := strings.Split(strings.TrimSpace(tags), ",")
 
@@ -144,6 +150,36 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
       for _, string := range splitTags {
         fmtString := strings.TrimSpace(strings.ToLower(string))
         batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
+      }
+
+      br := rr.db.SendBatch(ctx, batch)
+      err = br.Close()
+
+      return err
+    }
+    return nil
+	})
+
+	return error
+}
+
+func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags string) error {
+	error := rr.withTransaction(ctx, func() error {
+		var noteId int
+		_, err := rr.db.Exec(ctx, "UPDATE notes SET body=$1 where notes.id = $2", body, noteId)
+
+    if err != nil {
+      return err
+    }
+
+    if tags != "" {
+      splitTags := strings.Split(strings.TrimSpace(tags), ",")
+
+      batch := &pgx.Batch{}
+
+      for _, string := range splitTags {
+        fmtString := strings.TrimSpace(strings.ToLower(string))
+        batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2) ON CONFLICT (note_id, tag) DO NOTHING;", noteId, fmtString)
       }
 
       br := rr.db.SendBatch(ctx, batch)
@@ -199,6 +235,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 			Note{
 				ID:   NoteID(fmt.Sprint(id)),
 				Body: markdownToHtml(body),
+        BodyRaw: body,
 				Tags: tags,
 				Done: done,
 			},
