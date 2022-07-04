@@ -266,7 +266,8 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pageData := PageData{Notes: notes}
+  jn, _ := json.Marshal(notes)
+	pageData := PageData{JsonNotes: string(jn)}
 
 	RenderTemplate(w, "home", pageData)
 }
