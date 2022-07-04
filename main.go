@@ -87,6 +87,7 @@ func main() {
 
 type PageData struct {
 	Notes []repo.Note
+  JsonNotes string
   PreviousDay string
   NextDay string
 }
@@ -149,11 +150,12 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+  jn, _ := json.Marshal(notes)
   var pageData PageData
   if nextDay == nil {
-    pageData = PageData{Notes: notes, PreviousDay: previousDay.stringify()}
+    pageData = PageData{JsonNotes: string(jn) , PreviousDay: previousDay.stringify()}
   } else {
-    pageData = PageData{Notes: notes, PreviousDay: previousDay.stringify(), NextDay: nextDay.stringify()}
+    pageData = PageData{JsonNotes: string(jn), PreviousDay: previousDay.stringify(), NextDay: nextDay.stringify()}
   }
 
 	RenderTemplate(w, "home", pageData)
@@ -361,7 +363,6 @@ func getUserFromSession(r *http.Request) (urepo.User, bool) {
   }
 	userRepo := urepo.NewUserRepo(DB)
 	userId, ok := sessionState.Values["user_id"].(string)
-  Logger.Printf("%v", sessionState.Values)
 
 	if ok {
 		user, _ := userRepo.Get(r.Context(), urepo.Auth0ID(userId))
