@@ -73,6 +73,7 @@ func main() {
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
 	authedRouter.HandleFunc("/note/toggle", ToggleNoteHandler)
 	authedRouter.HandleFunc("/api/done", ApiToggleNoteHandler)
+	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", ApiEditNoteHandler).Methods("PUT")
 
 	srv := &http.Server{
 		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
@@ -212,6 +213,32 @@ func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	noteRepo := repo.NewNoteRepo(DB)
 	err = noteRepo.ToggleDone(r.Context(), repo.NoteID(payload.Id))
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+  
+  w.WriteHeader(http.StatusOK)
+}
+
+type EditApiPayload struct {
+  Id string
+  Body string
+  Tags string
+}
+
+func ApiEditNoteHandler(w http.ResponseWriter, r *http.Request) {
+  var payload EditApiPayload
+  
+  err := json.NewDecoder(r.Body).Decode(&payload)
+  if err != nil {
+      http.Error(w, err.Error(), http.StatusBadRequest)
+      return
+  }
+
+	noteRepo := repo.NewNoteRepo(DB)
+	err = noteRepo.Edit(r.Context(), repo.NoteID(payload.Id), payload.Body, payload.Tags)
 
 	if err != nil {
 		handleUnexpectedError(w, err)

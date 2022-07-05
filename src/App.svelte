@@ -4,11 +4,14 @@
   export let previousDay;
   export let nextDay;
   export let notes;
+  let editingId = undefined;
+  let editingBody = "";
+  let editingTags = "";
 
-  async function postData(url = '', data = {}, errorCallback) {
+  async function postData(url = '', data = {}, method = "POST") {
     // Default options are marked with *
     const response = await fetch(url, {
-      method: 'POST',
+      method: method,
       mode: 'cors',
       cache: 'no-cache',
       credentials: 'same-origin',
@@ -57,6 +60,40 @@
     })
   }
 
+  function toggleEdit(id) {
+      const note = notes.find(note => {
+        if (note.ID === id) {
+          // return a new object
+          return note
+      }
+		});
+    editingId = id
+    editingBody = note.BodyRaw
+    editingTags = note.Tags.join(", ")
+  }
+
+  function handleEdit(id) {
+    postData(`/api/note/${id}`, { Id: id, Body: editingBody, Tags: editingTags  }, "PUT")
+    .then(response => {
+      notes = notes.map(note => {
+        if (note.ID === id) {
+          // return a new object
+          return {
+            ID: id,
+            Done: note.Done,
+            BodyRaw: editingBody,
+            Tags: editingTags.split(", ")
+          };
+        }
+
+        // return the same object
+        return note;
+		}
+        )
+          editingId = undefined
+      });
+  }
+
 </script>
 
 <main>
@@ -81,9 +118,14 @@
           on:change={() => toggle(note.ID)}
         />
       </div>
+    {#if editingId === note.ID}
+      <textarea type="text" name="body" required bind:value={editingBody} />
+      <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags} />
+      <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
+    {:else}
       <div class="note" class:done={note.Done}>
         <a name={note.ID} />
-        {@html marked(note.Body)}
+        {@html marked(note.BodyRaw)}
         <hr />
       </div>
       <div class="metadata">
@@ -93,8 +135,10 @@
           {/each}
         </ul>
       </div>
+    {/if}
       <div class="flex-center">
         <a href="/note/{note.ID}/delete">delete</a>
+        <button on:click={() => toggleEdit(note.ID)}>Edit </button>
       </div>
     {/each}
   </div>

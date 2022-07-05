@@ -165,8 +165,13 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 
 func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags string) error {
 	error := rr.withTransaction(ctx, func() error {
-		var noteId int
-		_, err := rr.db.Exec(ctx, "UPDATE notes SET body=$1 where notes.id = $2", body, noteId)
+		_, err := rr.db.Exec(ctx, "UPDATE notes SET body=$1 WHERE notes.id = $2", body, noteId)
+
+    if err != nil {
+      return err
+    }
+
+		_, err = rr.db.Exec(ctx, "DELETE FROM tags WHERE note_id = $1", noteId)
 
     if err != nil {
       return err
@@ -179,7 +184,7 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 
       for _, string := range splitTags {
         fmtString := strings.TrimSpace(strings.ToLower(string))
-        batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2) ON CONFLICT (note_id, tag) DO NOTHING;", noteId, fmtString)
+        batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
       }
 
       br := rr.db.SendBatch(ctx, batch)
