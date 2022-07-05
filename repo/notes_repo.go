@@ -205,18 +205,20 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 
 	rows, err := rr.db.Query(
 		ctx,
-		`SELECT
+    `SELECT
       note_search.id,
       body,
       tags,
-      done
+      done,
+      inserted_at,
+      ts_rank(note_search.doc, to_tsquery($1)) AS rank
     FROM
       note_search
     WHERE
        note_search.doc @@ to_tsquery($1)
     ORDER BY
-      note_search.id DESC`,
-		tsquery,
+      rank DESC, inserted_at DESC;`,
+		tsquery, 
 	)
 	defer rows.Close()
 
@@ -229,7 +231,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 		var body string
 		var tags []string
 		var done bool
-		err := rows.Scan(&id, &body, &tags, &done)
+		err := rows.Scan(&id, &body, &tags, &done, nil, nil)
 
 		if err != nil {
 			return notes, err

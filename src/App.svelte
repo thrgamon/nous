@@ -119,16 +119,17 @@
         />
       </div>
     {#if editingId === note.ID}
-      <textarea type="text" name="body" required bind:value={editingBody} />
-      <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags} />
+      <textarea type="text" name="body" required bind:value={editingBody}/>
+      <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags}/>
       <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
+      <button on:click={()=>toggleEdit()}>X</button>
     {:else}
-      <div class="note" class:done={note.Done}>
+      <div class="note" class:done={note.Done} on:click={() => toggleEdit(note.ID)}>
         <a name={note.ID} />
         {@html marked(note.BodyRaw)}
         <hr />
       </div>
-      <div class="metadata">
+      <div class="metadata" on:click={() => toggleEdit(note.ID)}>
         <ul class="tags text-subdued">
           {#each note.Tags as tag}
             <li class="tag">{tag}</li>
@@ -138,7 +139,6 @@
     {/if}
       <div class="flex-center">
         <a href="/note/{note.ID}/delete">delete</a>
-        <button on:click={() => toggleEdit(note.ID)}>Edit </button>
       </div>
     {/each}
   </div>
