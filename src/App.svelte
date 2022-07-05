@@ -110,24 +110,16 @@
   </form>
   <div class="grid-note">
     {#each notes as note}
-      <div class="flex-center">
-        <input
-          name="done"
-          type="checkbox"
-          checked={note.Done}
-          on:change={() => toggle(note.ID)}
-        />
-      </div>
     {#if editingId === note.ID}
       <textarea type="text" name="body" required bind:value={editingBody}/>
       <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags}/>
       <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
       <button on:click={()=>toggleEdit()}>X</button>
     {:else}
-      <div class="note" class:done={note.Done} on:click={() => toggleEdit(note.ID)}>
+        <div class="note" >
+      <div class:done={note.Done} on:click={() => toggleEdit(note.ID)}>
         <a name={note.ID} />
         {@html marked(note.BodyRaw)}
-        <hr />
       </div>
       <div class="metadata" on:click={() => toggleEdit(note.ID)}>
         <ul class="tags text-subdued">
@@ -136,8 +128,16 @@
           {/each}
         </ul>
       </div>
+        <hr />
+        </div>
     {/if}
-      <div class="flex-center">
+      <div class="controls">
+        <input
+          name="done"
+          type="checkbox"
+          checked={note.Done}
+          on:change={() => toggle(note.ID)}
+        />
         <a href="/note/{note.ID}/delete">delete</a>
       </div>
     {/each}

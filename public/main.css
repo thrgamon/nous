@@ -90,7 +90,7 @@ header h1 a {
 
 .grid-note{
       display: grid;
-    grid-template-columns: 1fr 5fr 2fr 1fr;
+    grid-template-columns: 5fr 1fr;
   word-wrap: break-word;
 }
 
@@ -104,9 +104,9 @@ form p {
 }
 
 .flex-center{
-      display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .done {
@@ -122,9 +122,9 @@ form p {
 }
 
 .metadata {
-      display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex;
+    align-items: right;
+    justify-content: top;
 }
 
 .prev-next {
@@ -135,4 +135,26 @@ form p {
 
 .prev-next > a {
   text-decoration: none;
+}
+
+.controls {
+    display: flex;
+  flex-direction: column-reverse;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+@media screen and (max-width: 400px) {
+  .grid-note{
+      grid-template-columns: 5fr;
+      grid-template-rows: 5fr 1fr;
+  }
+
+  .note {
+    max-width: 300px;
+  }
+
+.controls {
+  flex-direction: row;
+}
 }
