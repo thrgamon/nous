@@ -111,10 +111,12 @@
   <div class="grid-note">
     {#each notes as note}
     {#if editingId === note.ID}
-      <textarea type="text" name="body" required bind:value={editingBody}/>
-      <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags}/>
-      <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
-      <button on:click={()=>toggleEdit()}>X</button>
+      <div class="note submit" >
+        <textarea type="text" name="body" required bind:value={editingBody}/>
+        <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags}/>
+        <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
+        <button on:click={()=>toggleEdit()}>X</button>
+      </div>
     {:else}
         <div class="note" >
       <div class:done={note.Done} on:click={() => toggleEdit(note.ID)}>
