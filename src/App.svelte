@@ -105,7 +105,7 @@
   </div>
   <form class="submit" action="/note" method="post">
     <textarea type="text" name="body" required autofocus />
-    <input type="text" name="tags" placeholder="use comma 'seperated values'" />
+    <input type="text" name="tags" placeholder="use comma 'seperated values'" autocorrect="off" autocapitalize="none" />
     <input type="submit" value="Submit" />
   </form>
   <div class="grid-note">
@@ -113,7 +113,7 @@
     {#if editingId === note.ID}
       <div class="note submit" >
         <textarea type="text" name="body" required bind:value={editingBody}/>
-        <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags}/>
+        <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags} autocorrect="off" autocapitalize="none"/>
         <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
         <button on:click={()=>toggleEdit()}>X</button>
       </div>
