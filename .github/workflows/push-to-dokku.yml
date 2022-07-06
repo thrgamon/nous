@@ -23,6 +23,6 @@ jobs:
     - name: Push to dokku
       uses: obrassard/action-dokku-deploy@v1.0.2
       with:
-        dokku_repo: 'dokku@tomgamon.xyz:nous'
+        dokku_repo: 'ssh://dokku@tomgamon.xyz:22/nous'
         ssh_key: ${{ secrets.SSH_KEY }}
         deploy_branch: 'main'
