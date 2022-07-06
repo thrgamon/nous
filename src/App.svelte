@@ -97,6 +97,7 @@
 </script>
 
 <main>
+  <h1> hello </h1>
   <div class="prev-next">
     <a href={`/t/${previousDay}`}>&larr;</a>
     {#if nextDay}
