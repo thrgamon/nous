@@ -3,6 +3,7 @@
 
   export let previousDay;
   export let nextDay;
+  export let currentDay;
   export let notes;
   let editingId = undefined;
   let editingBody = "";
@@ -99,9 +100,8 @@
 <main>
   <div class="prev-next">
     <a href={`/t/${previousDay}`}>&larr;</a>
-    {#if nextDay}
-      <a href={`/t/${nextDay}`}>&rarr;</a>
-    {/if}
+    <h2>{currentDay}</h2>
+    <a href={`/t/${nextDay}`}>&rarr;</a>
   </div>
   <form class="submit" action="/note" method="post">
     <textarea type="text" name="body" required autofocus />

@@ -92,6 +92,7 @@ type PageData struct {
   JsonNotes string
   PreviousDay string
   NextDay string
+  CurrentDay string
 }
 
 type IsoDate struct {
@@ -139,8 +140,8 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     t = isoDate
-    nextDay = isoDate.nextDay()
   }
+  nextDay = t.nextDay()
   previousDay := t.previousDay()
 
 
@@ -153,11 +154,11 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
   jn, _ := json.Marshal(notes)
-  var pageData PageData
-  if nextDay == nil {
-    pageData = PageData{JsonNotes: string(jn) , PreviousDay: previousDay.stringify()}
-  } else {
-    pageData = PageData{JsonNotes: string(jn), PreviousDay: previousDay.stringify(), NextDay: nextDay.stringify()}
+  pageData := PageData{
+    JsonNotes: string(jn), 
+    PreviousDay: previousDay.stringify(), 
+    NextDay: nextDay.stringify(), 
+    CurrentDay: t.stringify(),
   }
 
 	RenderTemplate(w, "home", pageData)

@@ -5,6 +5,7 @@ const app = new App({ target: document.body,
     notes: JSON.parse(window.notes) || [],
     previousDay: window.previousDay,
     nextDay: window.nextDay,
+    currentDay: window.currentDay,
 	}
 });
 
