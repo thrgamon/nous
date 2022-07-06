@@ -61,6 +61,7 @@ func main() {
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
 	r.HandleFunc("/callback", authentication.CallbackHandler)
+	r.HandleFunc("/healthcheck",HealthcheckHandler)
   authedRouter := r.NewRoute().Subrouter()
 	authedRouter.Use(ensureAuthed)
 	authedRouter.HandleFunc("/", HomeHandler)
@@ -164,6 +165,10 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "submit", PageData{})
+}
+
+func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
+  w.WriteHeader(http.StatusOK)
 }
 
 func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
