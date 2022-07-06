@@ -1,28 +1,22 @@
-name: 'Deploy to Dokku'
+---
+name: 'deploy to dokku'
 
 on:
   push:
     branches:
-    - main
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-  
-    - name: Cancel Previous Runs # Optional step 
-      uses: styfle/cancel-workflow-action@0.4.0
-      with:
-        access_token: ${{ github.token }}
-    
-    - name: Cloning repo # This step is required
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0 # This is required or you might get an error from Dokku
+      - name: Cloning repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-    - name: Push to dokku
-      uses: obrassard/action-dokku-deploy@v1.0.2
-      with:
-        dokku_repo: 'ssh://dokku@tomgamon.xyz:22/nous'
-        ssh_key: ${{ secrets.SSH_KEY }}
-        deploy_branch: 'main'
+      - name: Push to dokku
+        uses: dokku/github-action@master
+        with:
+          git_remote_url: 'ssh://dokku@tomgamon.xyz:22/nous'
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
