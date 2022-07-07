@@ -89,8 +89,7 @@ header h1 a {
 }
 
 .grid-note{
-      display: grid;
-    grid-template-columns: 5fr 1fr;
+    grid-template-columns: 1fr;
   word-wrap: break-word;
 }
 
@@ -110,6 +109,11 @@ form p {
 }
 
 .done {
+  color: lightgrey;
+  text-decoration: line-through;
+}
+
+.done a {
   color: lightgrey;
   text-decoration: line-through;
 }
@@ -138,10 +142,12 @@ form p {
 }
 
 .controls {
-    display: flex;
-  flex-direction: column-reverse;
-    justify-content: space-evenly;
-    align-items: center;
+  display: flex;
+  justify-content: end;
+}
+
+.controls > * {
+  margin-left: 1em;
 }
 
 @media screen and (max-width: 400px) {

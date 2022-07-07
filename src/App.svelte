@@ -38,14 +38,14 @@
   function toggle(id) {
     let success = false;
     postData('/api/done', { Id: id })
-    .then(response => {
+    .then(() => {
       notes = notes.map(note => {
         if (note.ID === id) {
           // return a new object
           return {
             ID: id,
             Done: !note.Done,
-            Body: note.Body,
+            BodyRaw: note.BodyRaw,
             Tags: note.Tags
           };
         }
@@ -54,20 +54,22 @@
         return note;
 		});
 
-      console.log(notes)
     })
-    .catch(error => {
+    .catch(() => {
         alert('there as a boo boo')
     })
   }
 
   function toggleEdit(id) {
-      const note = notes.find(note => {
-        if (note.ID === id) {
-          // return a new object
-          return note
+    if (id === editingId) {
+      editingId = undefined
+      return;
+    }
+    const note = notes.find(note => {
+      if (note.ID === id) {
+        return note
       }
-		});
+    });
     editingId = id
     editingBody = note.BodyRaw
     editingTags = note.Tags.join(", ")
@@ -97,6 +99,12 @@
 
 </script>
 
+<style>
+  .emoji-button {
+    cursor: pointer;
+  }
+
+</style>
 <main>
   <div class="prev-next">
     <a href={`/t/${previousDay}`}>&larr;</a>
@@ -110,20 +118,35 @@
   </form>
   <div class="grid-note">
     {#each notes as note}
+      <div class="controls">
+        <input
+          name="done"
+          type="checkbox"
+          checked={note.Done}
+          on:change={() => toggle(note.ID)}
+        />
+        <div class="emoji-button" on:click={()=>toggleEdit(note.ID)}>
+          {#if editingId === note.ID}
+          &#10060;
+          {:else}
+          &#128397;
+          {/if}
+        </div>
+        <div class="emoji-button" on:click={() => location.href=`/note/${note.ID}/delete`}>&#x1F5D1;</div>
+      </div>
     {#if editingId === note.ID}
       <div class="note submit" >
         <textarea type="text" name="body" required bind:value={editingBody}/>
         <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags} autocorrect="off" autocapitalize="none"/>
         <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
-        <button on:click={()=>toggleEdit()}>X</button>
       </div>
     {:else}
         <div class="note" >
-      <div class:done={note.Done} on:click={() => toggleEdit(note.ID)}>
+      <div class:done={note.Done}>
         <a name={note.ID} />
         {@html marked(note.BodyRaw)}
       </div>
-      <div class="metadata" on:click={() => toggleEdit(note.ID)}>
+      <div class="metadata">
         <ul class="tags text-subdued">
           {#each note.Tags as tag}
             <li class="tag">{tag}</li>
@@ -133,15 +156,6 @@
         <hr />
         </div>
     {/if}
-      <div class="controls">
-        <input
-          name="done"
-          type="checkbox"
-          checked={note.Done}
-          on:change={() => toggle(note.ID)}
-        />
-        <a href="/note/{note.ID}/delete">delete</a>
-      </div>
     {/each}
   </div>
 </main>
