@@ -1,6 +1,12 @@
 <script>
   import { marked } from "marked";
 
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    smartLists: true,
+});
+
   export let previousDay;
   export let nextDay;
   export let currentDay;
