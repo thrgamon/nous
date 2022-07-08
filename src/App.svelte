@@ -166,4 +166,8 @@
     {/if}
     {/each}
   </div>
+  <div class="prev-next">
+    <a href={`/t/${previousDay}`}>&larr;</a>
+    <a href={`/t/${nextDay}`}>&rarr;</a>
+  </div>
 </main>
