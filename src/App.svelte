@@ -1,5 +1,6 @@
 <script>
   import { marked } from "marked";
+  import Metadata from "./Metadata.svelte"
 
   marked.setOptions({
     gfm: true,
@@ -14,6 +15,7 @@
   let editingId = undefined;
   let editingBody = "";
   let editingTags = "";
+  let toggleDone = true;
 
   async function postData(url = '', data = {}, method = "POST") {
     // Default options are marked with *
@@ -103,12 +105,115 @@
       });
   }
 
-</script>
+  function toggleDoneFilter() {
+    toggleDone = !toggleDone
+    document.querySelectorAll(".done").forEach(e => e.hidden = !toggleDone)
+  }
 
+</script>
 <style>
+
+.submit input:not([type="submit" i]){
+  display: block;
+  min-width: 300px;
+  margin-bottom: 1em;
+  margin-top: 0.5em;
+}
+
+.submit textarea {
+  width: 100%;
+  height: 250px;
+}
+
+.grid-note{
+    grid-template-columns: 1fr;
+   word-wrap: break-word;
+  font-size: 14px;
+
+}
+
+.content {
+  max-width: 450px;
+}
+
+.done .content {
+  color: lightgrey;
+  text-decoration: line-through;
+}
+
+.done .content a {
+  text-decoration: line-through;
+}
+
+.note > hr {
+    height: 1px;
+    background-color: whitesmoke;
+    border: none;  
+
+}
+
+.prev-next {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1em;
+}
+
+.prev-next > a {
+  text-decoration: none;
+}
+
+.controls {
+  display: flex;
+  justify-content: end;
+}
+
+.controls > * {
+  margin-left: 1em;
+}
+
+@media screen and (max-width: 400px) {
+  .grid-note{
+      grid-template-columns: 1fr;
+  }
+
+  .note {
+    max-width: 300px;
+  }
+
+.controls {
+  flex-direction: row;
+}
+}
   .emoji-button {
     cursor: pointer;
   }
+
+.done-toggle {
+  border-radius: 25px;
+  width: 50px;
+  height: 25px;
+  position: relative;
+  background: green;
+  cursor: pointer;
+  margin-left: auto;
+  margin-bottom: 2em;
+}
+
+.slider {
+  position: absolute;
+  left: -0.5px;
+  top: -0.5px;
+  width: 25px;
+  height: 25.6px;
+  border-radius: 25px;
+  background-color: white;
+  transition: .2s;
+}
+
+.toggled {
+  left:unset;
+  transform: translateX(25.5px)
+}
 
 </style>
 <main>
@@ -123,47 +228,42 @@
     <input type="submit" value="Submit" />
   </form>
   <div class="grid-note">
+    <div class="done-toggle" on:click={()=>toggleDoneFilter()}> 
+      <div class="slider" class:toggled={!toggleDone}/>
+      </div>
     {#each notes as note}
-      <div class="controls">
-        <input
-          name="done"
-          type="checkbox"
-          checked={note.Done}
-          on:change={() => toggle(note.ID)}
-        />
-        <div class="emoji-button" on:click={()=>toggleEdit(note.ID)}>
-          {#if editingId === note.ID}
-          &#10060;
-          {:else}
-          &#128397;
-          {/if}
-        </div>
-        <div class="emoji-button" on:click={() => location.href=`/note/${note.ID}/delete`}>&#x1F5D1;</div>
-      </div>
-    {#if editingId === note.ID}
-      <div class="note submit" >
-        <textarea type="text" name="body" required bind:value={editingBody}/>
-        <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags} autocorrect="off" autocapitalize="none"/>
-        <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
-      </div>
-    {:else}
-        <div class="note" >
-      <div class:done={note.Done}>
+      <div class="note" class:done={note.Done}>
         <a name={note.ID} />
-        {@html marked(note.BodyRaw)}
-      </div>
-      <div class="metadata">
-        <ul class="tags text-subdued">
-          {#each note.Tags as tag}
-            <li class="tag">
-                  <a href={`/search?query=${tag}`}>{tag}</a>
-                </li>
-          {/each}
-        </ul>
-      </div>
-        <hr />
+        <div class="controls">
+          <input
+            name="done"
+            type="checkbox"
+            checked={note.Done}
+            on:change={() => toggle(note.ID)}
+          />
+          <div class="emoji-button" on:click={()=>toggleEdit(note.ID)}>
+            {#if editingId === note.ID}
+              &#10060;
+            {:else}
+              &#128397;
+            {/if}
+          </div>
+          <div class="emoji-button" on:click={() => location.href=`/note/${note.ID}/delete`}>&#x1F5D1;</div>
         </div>
-    {/if}
+          <div class="content">
+        {#if editingId === note.ID}
+        <div class="note submit" >
+          <textarea type="text" name="body" required bind:value={editingBody}/>
+          <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags} autocorrect="off" autocapitalize="none"/>
+          <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
+        </div>
+        {:else}
+        {@html marked(note.BodyRaw)}
+          <Metadata tags={note.Tags}/>
+        {/if}
+         </div>
+        <hr>
+      </div>
     {/each}
   </div>
   <div class="prev-next">
