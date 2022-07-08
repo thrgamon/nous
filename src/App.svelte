@@ -155,7 +155,9 @@
       <div class="metadata">
         <ul class="tags text-subdued">
           {#each note.Tags as tag}
-            <li class="tag">{tag}</li>
+            <li class="tag">
+                  <a href={`/search?query=${tag}`}>{tag}</a>
+                </li>
           {/each}
         </ul>
       </div>

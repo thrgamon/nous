@@ -24,7 +24,7 @@ a:link {
 }
 
 a:visited {
-  color: black;
+  color: inherit;
 }
 
 a:focus {
