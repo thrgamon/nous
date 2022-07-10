@@ -70,7 +70,6 @@ func main() {
 	authedRouter.HandleFunc("/search", SearchHandler)
 	authedRouter.HandleFunc("/note", AddNoteHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
-	authedRouter.HandleFunc("/note/toggle", ToggleNoteHandler)
 	authedRouter.HandleFunc("/api/done", ApiToggleNoteHandler)
 	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", ApiEditNoteHandler).Methods("PUT")
 
@@ -182,22 +181,6 @@ func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 
 	pageData := PageData{Notes: []repo.Note{note}}
 	RenderTemplate(w, "view", pageData)
-}
-
-func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
-	id := r.FormValue("id")
-
-	noteRepo := repo.NewNoteRepo(DB)
-	err := noteRepo.ToggleDone(r.Context(), repo.NoteID(id))
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	http.Redirect(w, r, "/#"+id, http.StatusSeeOther)
 }
 
 type DoneApiPayload struct {
