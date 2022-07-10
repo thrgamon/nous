@@ -1,5 +1,5 @@
 <script>
-  import TodoList from "./TodoList.svelte"
+  import Notes from "./Notes.svelte"
   let todos = getTodos();
 
   async function getTodos() {
@@ -16,11 +16,7 @@
 {#await todos}
   Loding todos
 {:then todos}
-  {#if todos !== null} 
-   <TodoList notes={todos}/>
-  {:else}
-    You have done all your todos!
-  {/if} 
+  <Notes notes={todos}/>
 {:catch error}
   There was a problem loading todos
   {error.message}

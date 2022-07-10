@@ -1,5 +1,5 @@
 <script>
-  import TodoList from "./TodoList.svelte"
+  import Notes from "./Notes.svelte"
   let readings = getReadings();
 
   async function getReadings() {
@@ -16,7 +16,7 @@
 {#await readings}
   Loding readings
 {:then readings}
-  <TodoList notes={readings}/>
+  <Notes notes={readings}/>
 {:catch error}
   There was a problem loading readings
   {error.message}
