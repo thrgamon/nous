@@ -21,3 +21,4 @@ todo
 public/build/
 .private
 .private.pub
+procfile

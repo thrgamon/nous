@@ -1,2 +1,0 @@
-go: go run .
-node: npm run dev
