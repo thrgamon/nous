@@ -55,16 +55,17 @@ func main() {
 	Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 	authentication.Logger = Logger
 	authentication.UserRepo = urepo.NewUserRepo(DB)
-	authentication.Store = Store 
+	authentication.Store = Store
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
 	r.HandleFunc("/callback", authentication.CallbackHandler)
-	r.HandleFunc("/healthcheck",HealthcheckHandler)
-  authedRouter := r.NewRoute().Subrouter()
+	r.HandleFunc("/healthcheck", HealthcheckHandler)
+	authedRouter := r.NewRoute().Subrouter()
 	authedRouter.Use(ensureAuthed)
 	authedRouter.HandleFunc("/", HomeHandler)
+	authedRouter.HandleFunc("/todo", TodoHandler)
 
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
@@ -73,6 +74,8 @@ func main() {
 	authedRouter.HandleFunc("/api/done", ApiToggleNoteHandler)
 	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", ApiEditNoteHandler).Methods("PUT")
 	authedRouter.HandleFunc("/api/notes", ApiNotesHandler).Methods("GET")
+	authedRouter.HandleFunc("/api/todos", ApiTodosHandler).Methods("GET")
+	authedRouter.HandleFunc("/api/readings", ApiReadingHandler).Methods("GET")
 
 	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
 
@@ -88,68 +91,67 @@ func main() {
 }
 
 type PageData struct {
-	Notes []repo.Note
-  JsonNotes string
-  PreviousDay string
-  NextDay string
-  CurrentDay string
+	Notes       []repo.Note
+	JsonNotes   string
+	PreviousDay string
+	NextDay     string
+	CurrentDay  string
 }
 
 type IsoDate struct {
-  t time.Time
+	t time.Time
 }
 
-func newIsoDateFromString(isoString string) (*IsoDate, error){
-  parsedTime, err := time.Parse(time.RFC3339, isoString+"T00:00:00+11:00")
+func newIsoDateFromString(isoString string) (*IsoDate, error) {
+	parsedTime, err := time.Parse(time.RFC3339, isoString+"T00:00:00+11:00")
 
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 
-  return &IsoDate{parsedTime}, nil
+	return &IsoDate{parsedTime}, nil
 }
 
-func newIsoDate() *IsoDate{
-  return &IsoDate{time.Now()}
+func newIsoDate() *IsoDate {
+	return &IsoDate{time.Now()}
 }
 
-func (isoDate *IsoDate) stringify()  string {
-  return fmt.Sprintf("%d-%02d-%02d", isoDate.t.Year(), int(isoDate.t.Month()), isoDate.t.Day())
+func (isoDate *IsoDate) stringify() string {
+	return fmt.Sprintf("%d-%02d-%02d", isoDate.t.Year(), int(isoDate.t.Month()), isoDate.t.Day())
 }
 
 func (isoDate *IsoDate) timify() time.Time {
-  return isoDate.t
+	return isoDate.t
 }
 
 func (isoDate *IsoDate) nextDay() *IsoDate {
-  return &IsoDate{isoDate.t.AddDate(0,0,1)}
+	return &IsoDate{isoDate.t.AddDate(0, 0, 1)}
 }
 
 func (isoDate *IsoDate) previousDay() *IsoDate {
-  return &IsoDate{isoDate.t.AddDate(0,0,-1)}
+	return &IsoDate{isoDate.t.AddDate(0, 0, -1)}
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	date, ok := vars["date"]
-  t := newIsoDate()
-  var nextDay *IsoDate
+	t := newIsoDate()
+	var nextDay *IsoDate
 
-  if ok {
-    isoDate, err := newIsoDateFromString(date)
+	if ok {
+		isoDate, err := newIsoDateFromString(date)
 
-    if err != nil {
-      handleUnexpectedError(w, err)
-      return
-    }
+		if err != nil {
+			handleUnexpectedError(w, err)
+			return
+		}
 
-    t = isoDate
-  }
-  nextDay = t.nextDay()
-  previousDay := t.previousDay()
+		t = isoDate
+	}
+	nextDay = t.nextDay()
+	previousDay := t.previousDay()
 
-
-	noteRepo := repo.NewNoteRepo(DB)
+	noteRepo := repo.NewNoteRepo(DB, Logger)
 	notes, err := noteRepo.GetAllSince(r.Context(), t.t)
 
 	if err != nil {
@@ -157,26 +159,29 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  jn, _ := json.Marshal(notes)
-  pageData := PageData{
-    JsonNotes: string(jn), 
-    PreviousDay: previousDay.stringify(), 
-    NextDay: nextDay.stringify(), 
-    CurrentDay: t.stringify(),
-  }
+	jn, _ := json.Marshal(notes)
+	pageData := PageData{
+		JsonNotes:   string(jn),
+		PreviousDay: previousDay.stringify(),
+		NextDay:     nextDay.stringify(),
+		CurrentDay:  t.stringify(),
+	}
 
 	RenderTemplate(w, "home", pageData)
 }
 
+func TodoHandler(w http.ResponseWriter, r *http.Request) {
+	RenderTemplate(w, "todo", PageData{})
+}
 func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
-  w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusOK)
 }
 
 func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	noteId := vars["noteId"]
 
-	noteRepo := repo.NewNoteRepo(DB)
+	noteRepo := repo.NewNoteRepo(DB, Logger)
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(noteId))
 
 	if err != nil {
@@ -189,27 +194,57 @@ func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type DoneApiPayload struct {
-  Id string `json:"id"`
+	Id string `json:"id"`
 }
 
 func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
-  var payload DoneApiPayload
-  
-  err := json.NewDecoder(r.Body).Decode(&payload)
-  if err != nil {
-      http.Error(w, err.Error(), http.StatusBadRequest)
-      return
-  }
+	var payload DoneApiPayload
 
-	noteRepo := repo.NewNoteRepo(DB)
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	noteRepo := repo.NewNoteRepo(DB, Logger)
 	err = noteRepo.ToggleDone(r.Context(), repo.NoteID(payload.Id))
 
 	if err != nil {
 		handleUnexpectedError(w, err)
 		return
 	}
-  
-  w.WriteHeader(http.StatusOK)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
+	noteRepo := repo.NewNoteRepo(DB, Logger)
+	notes, err := noteRepo.GetByTag(r.Context(), "to read")
+
+	if err != nil {
+		Logger.Println(err.Error())
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(notes)
+}
+
+func ApiTodosHandler(w http.ResponseWriter, r *http.Request) {
+	noteRepo := repo.NewNoteRepo(DB, Logger)
+	notes, err := noteRepo.GetByTag(r.Context(), "todo")
+
+	if err != nil {
+		Logger.Println(err.Error())
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(notes)
 }
 
 func ApiNotesHandler(w http.ResponseWriter, r *http.Request) {
@@ -217,64 +252,64 @@ func ApiNotesHandler(w http.ResponseWriter, r *http.Request) {
 
 	from := r.FormValue("from")
 	to := r.FormValue("to")
-  fromTime, err := newIsoDateFromString(from)
-  if err != nil {
-    Logger.Println(err.Error())
+	fromTime, err := newIsoDateFromString(from)
+	if err != nil {
+		Logger.Println(err.Error())
 		handleUnexpectedError(w, err)
-    return
-  }
-  toTime, err := newIsoDateFromString(to)
-  if err != nil {
-    Logger.Println(err.Error())
+		return
+	}
+	toTime, err := newIsoDateFromString(to)
+	if err != nil {
+		Logger.Println(err.Error())
 		handleUnexpectedError(w, err)
-    return
-  }
+		return
+	}
 
-	noteRepo := repo.NewNoteRepo(DB)
+	noteRepo := repo.NewNoteRepo(DB, Logger)
 	notes, err := noteRepo.GetAllBetween(r.Context(), fromTime.timify(), toTime.timify())
 
-  if err != nil {
-    Logger.Println(err.Error())
+	if err != nil {
+		Logger.Println(err.Error())
 		handleUnexpectedError(w, err)
-    return
-  }
+		return
+	}
 
-  w.Header().Set("Content-Type", "application/json")
-  w.WriteHeader(http.StatusOK)
-  json.NewEncoder(w).Encode(notes)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(notes)
 }
 
 type EditApiPayload struct {
-  Id string `json:"id"`
-  Body string `json:"body"`
-  Tags string `json:"tags"`
+	Id   string `json:"id"`
+	Body string `json:"body"`
+	Tags string `json:"tags"`
 }
 
 func ApiEditNoteHandler(w http.ResponseWriter, r *http.Request) {
-  var payload EditApiPayload
-  
-  err := json.NewDecoder(r.Body).Decode(&payload)
-  if err != nil {
-      http.Error(w, err.Error(), http.StatusBadRequest)
-      return
-  }
+	var payload EditApiPayload
 
-	noteRepo := repo.NewNoteRepo(DB)
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	noteRepo := repo.NewNoteRepo(DB, Logger)
 	err = noteRepo.Edit(r.Context(), repo.NoteID(payload.Id), payload.Body, payload.Tags)
 
 	if err != nil {
 		handleUnexpectedError(w, err)
 		return
 	}
-  
-  w.WriteHeader(http.StatusOK)
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	noteRepo := repo.NewNoteRepo(DB)
+	noteRepo := repo.NewNoteRepo(DB, Logger)
 	err := noteRepo.Delete(r.Context(), repo.NoteID(id))
 
 	if err != nil {
@@ -291,7 +326,7 @@ func AddNoteHandler(w http.ResponseWriter, r *http.Request) {
 	body := r.FormValue("body")
 	tags := r.FormValue("tags")
 
-	noteRepo := repo.NewNoteRepo(DB)
+	noteRepo := repo.NewNoteRepo(DB, Logger)
 	err := noteRepo.Add(r.Context(), body, tags)
 
 	if err != nil {
@@ -307,7 +342,7 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.FormValue("query")
 
-	noteRepo := repo.NewNoteRepo(DB)
+	noteRepo := repo.NewNoteRepo(DB, Logger)
 	notes, err := noteRepo.Search(r.Context(), query)
 
 	if err != nil {
@@ -315,7 +350,7 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  jn, _ := json.Marshal(notes)
+	jn, _ := json.Marshal(notes)
 	pageData := PageData{JsonNotes: string(jn)}
 
 	RenderTemplate(w, "home", pageData)
@@ -407,9 +442,9 @@ func handleUnexpectedError(w http.ResponseWriter, err error) {
 
 func getUserFromSession(r *http.Request) (urepo.User, bool) {
 	sessionState, err := Store.Get(r, "auth")
-  if err !=  nil {
-    println(err.Error())
-  }
+	if err != nil {
+		println(err.Error())
+	}
 	userRepo := urepo.NewUserRepo(DB)
 	userId, ok := sessionState.Values["user_id"].(string)
 
@@ -427,7 +462,7 @@ func ensureAuthed(next http.Handler) http.Handler {
 		if ok {
 			next.ServeHTTP(w, r)
 		} else {
-	    http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 			return
 		}
 	})

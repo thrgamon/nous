@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -13,18 +14,19 @@ import (
 type NoteID string
 
 type Note struct {
-	ID   NoteID `json:"id"`
-  Body string `json:"body"`
+	ID   NoteID   `json:"id"`
+	Body string   `json:"body"`
 	Tags []string `json:"tags"`
-	Done bool `json:"done"`
+	Done bool     `json:"done"`
 }
 
 type NoteRepo struct {
-	db *pgxpool.Pool
+	db     *pgxpool.Pool
+	logger *log.Logger
 }
 
-func NewNoteRepo(db *pgxpool.Pool) *NoteRepo {
-	return &NoteRepo{db: db}
+func NewNoteRepo(db *pgxpool.Pool, logger *log.Logger) *NoteRepo {
+	return &NoteRepo{db: db, logger: logger}
 }
 
 func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
@@ -56,7 +58,71 @@ func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
 }
 
 func (rr NoteRepo) GetAllSince(ctx context.Context, t time.Time) ([]Note, error) {
-  return rr.GetAllBetween(ctx, startOfDay(t), endOfDay(t))
+	return rr.GetAllBetween(ctx, startOfDay(t), endOfDay(t))
+}
+
+func (rr NoteRepo) GetByTag(ctx context.Context, tag string) ([]Note, error) {
+	var notes []Note
+	rows, err := rr.db.Query(
+		ctx,
+		`SELECT
+      note_search.id,
+      body,
+      tags,
+      done,
+      inserted_at
+    FROM
+      note_search
+  	WHERE
+  		$1 = ANY(tags) AND done = false
+    ORDER BY
+      note_search.id DESC`,
+    tag,
+	)
+
+	defer rows.Close()
+
+	if err != nil {
+		return notes, err
+	}
+
+	return rr.parseData(rows)
+}
+
+func (rr NoteRepo) parseData(rows pgx.Rows) ([]Note, error) {
+	var notes []Note
+	var err error
+
+	for rows.Next() {
+		var id int
+		var body string
+		var tags []string
+		var done bool
+		var insertedAt time.Time
+		err := rows.Scan(&id, &body, &tags, &done, &insertedAt)
+
+		if err != nil {
+			rr.logger.Println(err.Error())
+			return notes, err
+		}
+
+		notes = append(
+			notes,
+			Note{
+				ID:   NoteID(fmt.Sprint(id)),
+				Body: body,
+				Tags: tags,
+				Done: done,
+			},
+		)
+	}
+
+	if err != nil {
+		rr.logger.Println(err.Error())
+		return notes, err
+	}
+
+	return notes, nil
 }
 
 func (rr NoteRepo) GetAllBetween(ctx context.Context, from time.Time, to time.Time) ([]Note, error) {
@@ -84,34 +150,7 @@ func (rr NoteRepo) GetAllBetween(ctx context.Context, from time.Time, to time.Ti
 		return notes, err
 	}
 
-	for rows.Next() {
-		var id int
-		var body string
-		var tags []string
-		var done bool
-		var insertedAt time.Time
-		err := rows.Scan(&id, &body, &tags, &done, &insertedAt)
-
-		if err != nil {
-			return notes, err
-		}
-
-		notes = append(
-			notes,
-			Note{
-				ID:   NoteID(fmt.Sprint(id)),
-        Body: body,
-				Tags: tags,
-				Done: done,
-			},
-		)
-	}
-
-	if err != nil {
-		return notes, err
-	}
-
-	return notes, nil
+	return rr.parseData(rows)
 }
 
 func (rr NoteRepo) ToggleDone(ctx context.Context, noteId NoteID) error {
@@ -137,26 +176,26 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 		var noteId int
 		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
-    if err != nil {
-      return err
-    }
+		if err != nil {
+			return err
+		}
 
-    if tags != "" {
-      splitTags := strings.Split(strings.TrimSpace(tags), ",")
+		if tags != "" {
+			splitTags := strings.Split(strings.TrimSpace(tags), ",")
 
-      batch := &pgx.Batch{}
+			batch := &pgx.Batch{}
 
-      for _, string := range splitTags {
-        fmtString := strings.TrimSpace(strings.ToLower(string))
-        batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
-      }
+			for _, string := range splitTags {
+				fmtString := strings.TrimSpace(strings.ToLower(string))
+				batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
+			}
 
-      br := rr.db.SendBatch(ctx, batch)
-      err = br.Close()
+			br := rr.db.SendBatch(ctx, batch)
+			err = br.Close()
 
-      return err
-    }
-    return nil
+			return err
+		}
+		return nil
 	})
 
 	return error
@@ -166,32 +205,32 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 	error := rr.withTransaction(ctx, func() error {
 		_, err := rr.db.Exec(ctx, "UPDATE notes SET body=$1 WHERE notes.id = $2", body, noteId)
 
-    if err != nil {
-      return err
-    }
+		if err != nil {
+			return err
+		}
 
 		_, err = rr.db.Exec(ctx, "DELETE FROM tags WHERE note_id = $1", noteId)
 
-    if err != nil {
-      return err
-    }
+		if err != nil {
+			return err
+		}
 
-    if tags != "" {
-      splitTags := strings.Split(strings.TrimSpace(tags), ",")
+		if tags != "" {
+			splitTags := strings.Split(strings.TrimSpace(tags), ",")
 
-      batch := &pgx.Batch{}
+			batch := &pgx.Batch{}
 
-      for _, string := range splitTags {
-        fmtString := strings.TrimSpace(strings.ToLower(string))
-        batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
-      }
+			for _, string := range splitTags {
+				fmtString := strings.TrimSpace(strings.ToLower(string))
+				batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
+			}
 
-      br := rr.db.SendBatch(ctx, batch)
-      err = br.Close()
+			br := rr.db.SendBatch(ctx, batch)
+			err = br.Close()
 
-      return err
-    }
-    return nil
+			return err
+		}
+		return nil
 	})
 
 	return error
@@ -204,7 +243,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 
 	rows, err := rr.db.Query(
 		ctx,
-    `SELECT
+		`SELECT
       note_search.id,
       body,
       tags,
@@ -217,7 +256,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
        note_search.doc @@ to_tsquery($1)
     ORDER BY
       rank DESC, inserted_at DESC;`,
-		tsquery, 
+		tsquery,
 	)
 	defer rows.Close()
 
@@ -240,7 +279,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 			notes,
 			Note{
 				ID:   NoteID(fmt.Sprint(id)),
-        Body: body,
+				Body: body,
 				Tags: tags,
 				Done: done,
 			},
