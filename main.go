@@ -66,7 +66,7 @@ func main() {
 	authedRouter.Use(ensureAuthed)
 	authedRouter.HandleFunc("/", HomeHandler)
 	authedRouter.HandleFunc("/todos", HomeHandler)
-	authedRouter.HandleFunc("/reading", HomeHandler)
+	authedRouter.HandleFunc("/readings", HomeHandler)
 
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)

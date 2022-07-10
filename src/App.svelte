@@ -67,6 +67,9 @@
         <a href={`/t/${nextDay}`}>&rarr;</a>
       </div>
     </Route>
+    <Route path="search">
+      <Notes notes={notes}/>
+    </Route>
     <Route path="todos">
       <Todos/>
     </Route>
