@@ -56,6 +56,10 @@ func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
 }
 
 func (rr NoteRepo) GetAllSince(ctx context.Context, t time.Time) ([]Note, error) {
+  return rr.GetAllBetween(ctx, startOfDay(t), endOfDay(t))
+}
+
+func (rr NoteRepo) GetAllBetween(ctx context.Context, from time.Time, to time.Time) ([]Note, error) {
 	var notes []Note
 	rows, err := rr.db.Query(
 		ctx,
@@ -71,8 +75,8 @@ func (rr NoteRepo) GetAllSince(ctx context.Context, t time.Time) ([]Note, error)
       inserted_at BETWEEN $1 AND $2
     ORDER BY
       note_search.id DESC`,
-		startOfDay(t),
-		endOfDay(t),
+		from,
+		to,
 	)
 	defer rows.Close()
 

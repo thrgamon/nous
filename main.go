@@ -72,6 +72,7 @@ func main() {
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
 	authedRouter.HandleFunc("/api/done", ApiToggleNoteHandler)
 	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", ApiEditNoteHandler).Methods("PUT")
+	authedRouter.HandleFunc("/api/notes", ApiNotesHandler).Methods("GET")
 
 	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
 
@@ -114,6 +115,10 @@ func newIsoDate() *IsoDate{
 
 func (isoDate *IsoDate) stringify()  string {
   return fmt.Sprintf("%d-%02d-%02d", isoDate.t.Year(), int(isoDate.t.Month()), isoDate.t.Day())
+}
+
+func (isoDate *IsoDate) timify() time.Time {
+  return isoDate.t
 }
 
 func (isoDate *IsoDate) nextDay() *IsoDate {
@@ -184,7 +189,7 @@ func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type DoneApiPayload struct {
-  Id string
+  Id string `json:"id"`
 }
 
 func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -207,10 +212,42 @@ func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
   w.WriteHeader(http.StatusOK)
 }
 
+func ApiNotesHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	from := r.FormValue("from")
+	to := r.FormValue("to")
+  fromTime, err := newIsoDateFromString(from)
+  if err != nil {
+    Logger.Println(err.Error())
+		handleUnexpectedError(w, err)
+    return
+  }
+  toTime, err := newIsoDateFromString(to)
+  if err != nil {
+    Logger.Println(err.Error())
+		handleUnexpectedError(w, err)
+    return
+  }
+
+	noteRepo := repo.NewNoteRepo(DB)
+	notes, err := noteRepo.GetAllBetween(r.Context(), fromTime.timify(), toTime.timify())
+
+  if err != nil {
+    Logger.Println(err.Error())
+		handleUnexpectedError(w, err)
+    return
+  }
+
+  w.Header().Set("Content-Type", "application/json")
+  w.WriteHeader(http.StatusOK)
+  json.NewEncoder(w).Encode(notes)
+}
+
 type EditApiPayload struct {
-  Id string
-  Body string
-  Tags string
+  Id string `json:"id"`
+  Body string `json:"body"`
+  Tags string `json:"tags"`
 }
 
 func ApiEditNoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -366,7 +403,6 @@ func serveResources(w http.ResponseWriter, r *http.Request) {
 
 func handleUnexpectedError(w http.ResponseWriter, err error) {
 	http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-	Logger.Println(err.Error())
 }
 
 func getUserFromSession(r *http.Request) (urepo.User, bool) {
