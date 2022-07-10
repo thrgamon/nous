@@ -48,13 +48,13 @@
     postData('/api/done', { Id: id })
     .then(() => {
       notes = notes.map(note => {
-        if (note.ID === id) {
+        if (note.id === id) {
           // return a new object
           return {
-            ID: id,
-            Done: !note.Done,
-            BodyRaw: note.BodyRaw,
-            Tags: note.Tags
+            id: id,
+            done: !note.done,
+            body: note.body,
+            tags: note.tags
           };
         }
 
@@ -74,26 +74,26 @@
       return;
     }
     const note = notes.find(note => {
-      if (note.ID === id) {
+      if (note.id === id) {
         return note
       }
     });
     editingId = id
-    editingBody = note.BodyRaw
-    editingTags = note.Tags.join(", ")
+    editingBody = note.body
+    editingTags = note.tags.join(", ")
   }
 
   function handleEdit(id) {
-    postData(`/api/note/${id}`, { Id: id, Body: editingBody, Tags: editingTags  }, "PUT")
+    postData(`/api/note/${id}`, { Id: id, Body: editingBody, tags: editingTags  }, "PUT")
     .then(response => {
       notes = notes.map(note => {
-        if (note.ID === id) {
+        if (note.id === id) {
           // return a new object
           return {
-            ID: id,
-            Done: note.Done,
-            BodyRaw: editingBody,
-            Tags: editingTags.split(", ")
+            id: id,
+            done: note.done,
+            body: editingBody,
+            tags: editingTags.split(", ")
           };
         }
 
@@ -232,34 +232,34 @@
       <div class="slider" class:toggled={!toggleDone}/>
       </div>
     {#each notes as note}
-      <div class="note" class:done={note.Done}>
-        <a name={note.ID} />
+      <div class="note" class:done={note.done}>
+        <a name={note.id} />
         <div class="controls">
           <input
             name="done"
             type="checkbox"
-            checked={note.Done}
-            on:change={() => toggle(note.ID)}
+            checked={note.done}
+            on:change={() => toggle(note.id)}
           />
-          <div class="emoji-button" on:click={()=>toggleEdit(note.ID)}>
-            {#if editingId === note.ID}
+          <div class="emoji-button" on:click={()=>toggleEdit(note.id)}>
+            {#if editingId === note.id}
               &#10060;
             {:else}
               &#128397;
             {/if}
           </div>
-          <div class="emoji-button" on:click={() => location.href=`/note/${note.ID}/delete`}>&#x1F5D1;</div>
+          <div class="emoji-button" on:click={() => location.href=`/note/${note.id}/delete`}>&#x1F5D1;</div>
         </div>
           <div class="content">
-        {#if editingId === note.ID}
+        {#if editingId === note.id}
         <div class="note submit" >
           <textarea type="text" name="body" required bind:value={editingBody}/>
           <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags} autocorrect="off" autocapitalize="none"/>
-          <input type="submit" value="Submit" on:click={()=>handleEdit(note.ID)}/>
+          <input type="submit" value="Submit" on:click={()=>handleEdit(note.id)}/>
         </div>
         {:else}
-        {@html marked(note.BodyRaw)}
-          <Metadata tags={note.Tags}/>
+        {@html marked(note.body)}
+          <Metadata tags={note.tags}/>
         {/if}
          </div>
         <hr>

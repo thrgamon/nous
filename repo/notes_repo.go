@@ -3,12 +3,9 @@ package repo
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"strings"
 	"time"
 
-	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/parser"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
@@ -16,11 +13,10 @@ import (
 type NoteID string
 
 type Note struct {
-	ID   NoteID
-	Body template.HTML
-  BodyRaw string
-	Tags []string
-	Done bool
+	ID   NoteID `json:"id"`
+  Body string `json:"body"`
+	Tags []string `json:"tags"`
+	Done bool `json:"done"`
 }
 
 type NoteRepo struct {
@@ -52,7 +48,7 @@ func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
 
 	note := Note{
 		ID:   id,
-		Body: template.HTML(markdown.ToHTML([]byte(body), nil, nil)),
+		Body: body,
 		Tags: tags,
 	}
 
@@ -100,8 +96,7 @@ func (rr NoteRepo) GetAllSince(ctx context.Context, t time.Time) ([]Note, error)
 			notes,
 			Note{
 				ID:   NoteID(fmt.Sprint(id)),
-				Body: markdownToHtml(body),
-        BodyRaw: body,
+        Body: body,
 				Tags: tags,
 				Done: done,
 			},
@@ -241,8 +236,7 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 			notes,
 			Note{
 				ID:   NoteID(fmt.Sprint(id)),
-				Body: markdownToHtml(body),
-        BodyRaw: body,
+        Body: body,
 				Tags: tags,
 				Done: done,
 			},
@@ -274,14 +268,6 @@ func (rr NoteRepo) withTransaction(ctx context.Context, fn func() error) error {
 	}
 
 	return nil
-}
-
-func markdownToHtml(text string) template.HTML {
-	extensions := parser.CommonExtensions | parser.HardLineBreak
-	parser := parser.NewWithExtensions(extensions)
-
-	md := []byte(text)
-	return template.HTML(markdown.ToHTML(md, parser, nil))
 }
 
 func startOfDay(t time.Time) time.Time {
