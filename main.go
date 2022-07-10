@@ -67,7 +67,6 @@ func main() {
 	authedRouter.HandleFunc("/", HomeHandler)
 
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
-	authedRouter.HandleFunc("/submit", SubmitHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
 	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
 	authedRouter.HandleFunc("/note", AddNoteHandler)
@@ -162,10 +161,6 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
   }
 
 	RenderTemplate(w, "home", pageData)
-}
-
-func SubmitHandler(w http.ResponseWriter, r *http.Request) {
-	RenderTemplate(w, "submit", PageData{})
 }
 
 func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {

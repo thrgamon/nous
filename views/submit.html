@@ -1,9 +1,0 @@
-  {{template "header" .}}
-  <form class="submit" action="/note" method="post">
-    <label for="body">Body</label>
-    <textarea type="text" name="body" required></textarea>
-    <label for="tags">Tags</label>
-    <input type="text" name="tags" placeholder="use space 'seperated values'" required>
-    <input type="submit" value="Submit">
-  </form>
-  {{template "footer" .}}
