@@ -65,7 +65,8 @@ func main() {
 	authedRouter := r.NewRoute().Subrouter()
 	authedRouter.Use(ensureAuthed)
 	authedRouter.HandleFunc("/", HomeHandler)
-	authedRouter.HandleFunc("/todo", TodoHandler)
+	authedRouter.HandleFunc("/todos", HomeHandler)
+	authedRouter.HandleFunc("/reading", HomeHandler)
 
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
