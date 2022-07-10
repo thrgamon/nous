@@ -68,12 +68,13 @@ func main() {
 
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
-	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
 	authedRouter.HandleFunc("/note", AddNoteHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
 	authedRouter.HandleFunc("/note/toggle", ToggleNoteHandler)
 	authedRouter.HandleFunc("/api/done", ApiToggleNoteHandler)
 	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", ApiEditNoteHandler).Methods("PUT")
+
+	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
 
 	srv := &http.Server{
 		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
