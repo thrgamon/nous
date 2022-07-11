@@ -16,7 +16,11 @@
 {#await readings}
   Loding readings
 {:then readings}
+  {#if readings !== null}
   <Notes notes={readings}/>
+  {:else}
+    No Readings
+  {/if}
 {:catch error}
   There was a problem loading readings
   {error.message}

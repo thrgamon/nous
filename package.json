@@ -18,6 +18,7 @@
     "svelte": "^3.0.0"
   },
   "dependencies": {
+    "dayjs": "^1.11.3",
     "marked": "^4.0.17",
     "sirv-cli": "^2.0.0",
     "svelte-navigator": "^3.1.6"

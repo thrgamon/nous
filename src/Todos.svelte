@@ -16,7 +16,11 @@
 {#await todos}
   Loding todos
 {:then todos}
-  <Notes notes={todos}/>
+  {#if todos !== null}
+    <Notes notes={todos}/>
+  {:else}
+    No todos
+  {/if}
 {:catch error}
   There was a problem loading todos
   {error.message}
