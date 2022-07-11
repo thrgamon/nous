@@ -77,7 +77,7 @@ func (rr NoteRepo) GetByTag(ctx context.Context, tag string) ([]Note, error) {
   		$1 = ANY(tags) AND done = false
     ORDER BY
       note_search.id DESC`,
-    tag,
+		tag,
 	)
 
 	defer rows.Close()
