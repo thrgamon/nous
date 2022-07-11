@@ -81,7 +81,7 @@ func main() {
 	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
 
 	srv := &http.Server{
-		Handler:      handlers.CombinedLoggingHandler(os.Stdout, r),
+		Handler:      handlers.LoggingHandler(os.Stdout, r),
 		Addr:         "0.0.0.0:" + env.GetEnvWithFallback("PORT", "8080"),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
