@@ -108,6 +108,18 @@
 </script>
   <style>
 
+.submit input:not([type="submit" i]){
+  display: block;
+  min-width: 300px;
+  margin-bottom: 1em;
+  margin-top: 0.5em;
+}
+
+.submit textarea {
+  width: 100%;
+  height: 250px;
+}
+
 .grid-note{
     grid-template-columns: 1fr;
    word-wrap: break-word;
