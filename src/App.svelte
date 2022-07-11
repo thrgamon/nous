@@ -70,6 +70,23 @@
     <Route path="search">
       <Notes notes={notes}/>
     </Route>
+    <Route path="t/:date">
+      <div class="prev-next">
+        <a href={`/t/${previousDay}`}>&larr;</a>
+        <h2>{currentDay}</h2>
+        <a href={`/t/${nextDay}`}>&rarr;</a>
+      </div>
+      <form class="submit" action="/note" method="post">
+        <textarea type="text" name="body" required autofocus />
+        <input type="text" name="tags" placeholder="use comma 'seperated values'" autocorrect="off" autocapitalize="none" />
+        <input type="submit" value="Submit" />
+      </form>
+      <Notes notes={notes}/>
+      <div class="prev-next">
+        <a href={`/t/${previousDay}`}>&larr;</a>
+        <a href={`/t/${nextDay}`}>&rarr;</a>
+      </div>
+    </Route>
     <Route path="todos">
       <Todos/>
     </Route>
