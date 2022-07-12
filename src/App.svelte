@@ -4,6 +4,7 @@
   import Todos from "./Todos.svelte"
   import Reading from "./Reading.svelte"
   import { Router, Route, Link } from "svelte-navigator";
+  import dayjs from 'dayjs'
 
   export let previousDay;
   export let nextDay;
@@ -52,27 +53,13 @@
   </header>
   <main>
     <Route path="/">
-      <Home />
+      <Home currentDay={dayjs().format('YYYY-MM-DD')}/>
     </Route>
     <Route path="search">
       <Notes notes={notes}/>
     </Route>
-    <Route path="t/:date">
-      <div class="prev-next">
-        <a href={`/t/${previousDay}`}>&larr;</a>
-        <h2>{currentDay}</h2>
-        <a href={`/t/${nextDay}`}>&rarr;</a>
-      </div>
-      <form class="submit" action="/note" method="post">
-        <textarea type="text" name="body" required autofocus />
-        <input type="text" name="tags" placeholder="use comma 'seperated values'" autocorrect="off" autocapitalize="none" />
-        <input type="submit" value="Submit" />
-      </form>
-      <Notes notes={notes}/>
-      <div class="prev-next">
-        <a href={`/t/${previousDay}`}>&larr;</a>
-        <a href={`/t/${nextDay}`}>&rarr;</a>
-      </div>
+    <Route path="t/:date" let:params>
+      <Home currentDay={params.date}/>
     </Route>
     <Route path="todos">
       <Todos/>

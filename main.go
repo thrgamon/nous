@@ -65,10 +65,7 @@ func main() {
 	authedRouter := r.NewRoute().Subrouter()
 	authedRouter.Use(ensureAuthed)
 	authedRouter.HandleFunc("/", HomeHandler)
-	authedRouter.HandleFunc("/todos", HomeHandler)
-	authedRouter.HandleFunc("/readings", HomeHandler)
 
-	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
 	authedRouter.HandleFunc("/note", AddNoteHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
@@ -79,6 +76,9 @@ func main() {
 	authedRouter.HandleFunc("/api/readings", ApiReadingHandler).Methods("GET")
 
 	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
+
+  // Catchall router
+  r.PathPrefix("/").HandlerFunc(HomeHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.LoggingHandler(os.Stdout, r),

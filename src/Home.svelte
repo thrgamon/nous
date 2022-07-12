@@ -2,9 +2,9 @@
   import Notes from "./Notes.svelte"
   import dayjs from 'dayjs'
 
-  let currentDay = dayjs().format('YYYY-MM-DD')
-  let nextDay = dayjs().add(1, 'day').format('YYYY-MM-DD')
-  let previousDay = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+  export let currentDay;
+  let nextDay = dayjs(currentDay, 'YYYY-MM-DD').add(1, 'day').format('YYYY-MM-DD')
+  let previousDay = dayjs(currentDay, 'YYYY-MM-DD').subtract(1, 'day').format('YYYY-MM-DD')
   let notes = getNotes();
 
   async function getNotes() {
