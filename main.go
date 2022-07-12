@@ -459,12 +459,27 @@ func getUserFromSession(r *http.Request) (urepo.User, bool) {
 
 func ensureAuthed(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, ok := getUserFromSession(r)
-		if ok {
-			next.ServeHTTP(w, r)
-		} else {
-			http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-			return
-		}
+    authHeader := r.Header.Get("Authorization")
+    if authHeader == "" {
+      _, ok := getUserFromSession(r)
+      if ok {
+        next.ServeHTTP(w, r)
+      } else {
+        http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+        return
+      }
+    } else {
+      key, present := os.LookupEnv("AUTH_KEY")
+      if present && key == authHeader {
+        next.ServeHTTP(w, r)
+      } else if present && key != authHeader{
+        http.Error(w, "Could not authenticate request", http.StatusUnauthorized)
+        return
+      } else {
+        http.Error(w, "Could not authenticate request", http.StatusInternalServerError)
+        Logger.Println("AUTH_KEY not found in environment")
+        return
+      }
+    }
 	})
 }
