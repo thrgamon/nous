@@ -5,12 +5,12 @@ module github.com/thrgamon/nous
 go 1.18
 
 require (
-	github.com/gomarkdown/markdown v0.0.0-20220607163217-45f7c050e2d1
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/thrgamon/go-utils v0.1.3
+	github.com/yuin/goldmark v1.1.32
 )
 
 require (

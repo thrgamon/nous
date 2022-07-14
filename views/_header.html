@@ -17,10 +17,12 @@
     <meta property="og:description" content="A simple site for finding the best learning notes.">
     <!-- <meta property="og:image" content="image.png"> -->
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
     <link rel="stylesheet" href="/public/main.css">
-	  <link rel='stylesheet' href='/public/build/bundle.css'>
+	  <!-- <link rel='stylesheet' href='/public/build/bundle.css'> -->
 
-	  <script defer src='/public/build/bundle.js'></script>
+	  <!-- <script defer src='/public/build/bundle.js'></script> -->
+  <script src="https://unpkg.com/htmx.org@1.8.0"></script>
     <link rel="apple-touch-icon" sizes="180x180" href="/public/favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon/favicon-16x16.png">
@@ -28,3 +30,34 @@
 </head> 
 <body>
 {{ end }}
+
+{{ define "note" }}
+  <div class="note {{if .Done}} done {{end}}">
+  <a name={{.ID}}></a>
+    <div class="controls">
+      <input
+        name="done"
+        type="checkbox"
+        {{if .Done}}checked{{end}}
+        hx-post="/note/{{.ID}}/toggle"
+        hx-target="closest .note"
+        hx-swap="outerHTML"
+      />
+    <div class="emoji-button" hx-get="/note/{{.ID}}/edit" hx-target="closest .note" hx-swap="outerHTML">&#128397;</div>
+    <div class="emoji-button" hx-get="/note/{{.ID}}/delete" hx-target="closest .note" hx-swap="delete">&#x1F5D1;</div>
+    </div>
+      <div class="content">
+        {{.DisplayBody}}
+     </div>
+<div class="metadata">
+<ul class="tags text-subdued">
+    {{ range .Tags}} 
+    <li class="tag">
+        <a href="/tag?tag={{.}}">{{.}}</a>
+    </li>
+      {{end}}
+</ul>
+    </div>
+    <hr>
+  </div>
+{{end}}

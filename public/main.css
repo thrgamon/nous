@@ -1,9 +1,8 @@
 html {
-  background: #fff;
   font-family: sans-serif;
 }
 
-body {
+main {
   max-width: 800px;
   margin: auto;
   padding: 10px 20px;
@@ -43,3 +42,66 @@ header h1 a {
   text-decoration: none;
 }
 
+.done .content {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.done .content a {
+  text-decoration: line-through;
+}
+
+.controls {
+  display: flex;
+  justify-content: end;
+}
+
+.controls > * {
+  margin-left: 1em;
+}
+
+.tags {
+  padding-inline-start: 0;
+}
+
+.text-subdued {
+    font-size: 0.8em;
+  color: darkgray;
+}
+
+.tag {
+    display: inline-block;
+}
+.tag ~ .tag::before{
+  margin-left: -0.25em;
+  content: ", ";
+}
+
+.metadata {
+    display: flex;
+    align-items: right;
+    justify-content: top;
+}
+
+.submit input:not([type="submit" i]){
+  display: block;
+  min-width: 300px;
+  margin-bottom: 1em;
+  margin-top: 0.5em;
+}
+
+.submit textarea {
+  width: 100%;
+  height: 250px;
+}
+
+
+.prev-next {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1em;
+}
+
+.prev-next > a {
+  text-decoration: none;
+}

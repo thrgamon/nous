@@ -1,0 +1,10 @@
+<div class="note submit" >
+  <div class="controls">
+    <div class="emoji-button" hx-get="/note/{{.ID}}" hx-target="closest .note" hx-swap="outerHTML">&#10060;</div>
+  </div>
+  <form hx-put="/note/{{.ID}}/edit" hx-target="closest .note" hx-swap="outerHTML">
+  <textarea type="text" name="body" required>{{.Body}}</textarea>
+  <input type="text" name="tags" placeholder="use comma 'seperated values'" value="{{.DisplayTags}}" autocorrect="off" autocapitalize="none"/>
+  <input type="submit" value="Submit" />
+  </form>
+</div>

@@ -64,11 +64,16 @@ func main() {
 	r.HandleFunc("/healthcheck", HealthcheckHandler)
 	authedRouter := r.NewRoute().Subrouter()
 	authedRouter.Use(ensureAuthed)
-	authedRouter.HandleFunc("/", HomeHandler)
+	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 
 	authedRouter.HandleFunc("/search", SearchHandler)
+	authedRouter.HandleFunc("/tag", TagHandler)
 	authedRouter.HandleFunc("/note", AddNoteHandler)
+	authedRouter.HandleFunc("/note/{id:[0-9]+}", NoteHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", DeleteNoteHandler)
+	authedRouter.HandleFunc("/note/{id:[0-9]+}/edit", EditNoteHandler).Methods("GET")
+	authedRouter.HandleFunc("/note/{id:[0-9]+}/edit", UpdateNoteHandler).Methods("PUT")
+	authedRouter.HandleFunc("/note/{id:[0-9]+}/toggle", ToggleNoteHandler)
 	authedRouter.HandleFunc("/api/done", ApiToggleNoteHandler)
 	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", ApiEditNoteHandler).Methods("PUT")
 	authedRouter.HandleFunc("/api/notes", ApiNotesHandler).Methods("GET")
@@ -77,8 +82,8 @@ func main() {
 
 	authedRouter.PathPrefix("/public/").HandlerFunc(serveResources)
 
-  // Catchall router
-  r.PathPrefix("/").HandlerFunc(HomeHandler)
+	// Catchall router
+	r.PathPrefix("/").HandlerFunc(HomeHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.LoggingHandler(os.Stdout, r),
@@ -133,6 +138,22 @@ func (isoDate *IsoDate) previousDay() *IsoDate {
 	return &IsoDate{isoDate.t.AddDate(0, 0, -1)}
 }
 
+func TestHandler(w http.ResponseWriter, r *http.Request) {
+	noteRepo := repo.NewNoteRepo(DB, Logger)
+	notes, err := noteRepo.GetByTag(r.Context(), "todo")
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	pageData := PageData{
+		Notes: notes,
+	}
+
+	RenderTemplate(w, "test", pageData)
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	date, ok := vars["date"]
@@ -160,9 +181,8 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jn, _ := json.Marshal(notes)
 	pageData := PageData{
-		JsonNotes:   string(jn),
+		Notes:       notes,
 		PreviousDay: previousDay.stringify(),
 		NextDay:     nextDay.stringify(),
 		CurrentDay:  t.stringify(),
@@ -178,24 +198,79 @@ func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	noteId := vars["noteId"]
+func NoteHandler(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
 
 	noteRepo := repo.NewNoteRepo(DB, Logger)
-	note, err := noteRepo.Get(r.Context(), repo.NoteID(noteId))
+	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
 
 	if err != nil {
 		handleUnexpectedError(w, err)
 		return
 	}
 
-	pageData := PageData{Notes: []repo.Note{note}}
-	RenderTemplate(w, "view", pageData)
+	RenderTemplate(w, "_toggle", note)
 }
 
 type DoneApiPayload struct {
 	Id string `json:"id"`
+}
+
+func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	noteRepo := repo.NewNoteRepo(DB, Logger)
+	_, err := noteRepo.ToggleDone(r.Context(), repo.NoteID(id))
+	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	RenderTemplate(w, "_toggle", note)
+}
+
+func EditNoteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	noteRepo := repo.NewNoteRepo(DB, Logger)
+	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
+
+	if err != nil {
+		Logger.Println(err.Error())
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	RenderTemplate(w, "_edit", note)
+}
+
+func UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	r.ParseForm()
+
+	body := r.FormValue("body")
+	tags := r.FormValue("tags")
+
+	noteRepo := repo.NewNoteRepo(DB, Logger)
+	err := noteRepo.Edit(r.Context(), repo.NoteID(id), body, tags)
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	RenderTemplate(w, "_toggle", note)
 }
 
 func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +283,7 @@ func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	noteRepo := repo.NewNoteRepo(DB, Logger)
-	err = noteRepo.ToggleDone(r.Context(), repo.NoteID(payload.Id))
+	_, err = noteRepo.ToggleDone(r.Context(), repo.NoteID(payload.Id))
 
 	if err != nil {
 		handleUnexpectedError(w, err)
@@ -338,6 +413,23 @@ func AddNoteHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func TagHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	tag := r.FormValue("tag")
+
+	noteRepo := repo.NewNoteRepo(DB, Logger)
+	notes, err := noteRepo.GetByTag(r.Context(), tag)
+
+	if err != nil {
+		handleUnexpectedError(w, err)
+		return
+	}
+
+	pageData := PageData{Notes: notes}
+
+	RenderTemplate(w, "home", pageData)
+}
 func SearchHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
@@ -351,8 +443,7 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jn, _ := json.Marshal(notes)
-	pageData := PageData{JsonNotes: string(jn)}
+	pageData := PageData{Notes: notes}
 
 	RenderTemplate(w, "home", pageData)
 }
@@ -364,6 +455,7 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 		err := Templates[tmpl].Execute(w, data)
 
 		if err != nil {
+			Logger.Println(err.Error())
 			handleUnexpectedError(w, err)
 			return
 		}
@@ -372,6 +464,7 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 		err := template.Execute(w, data)
 
 		if err != nil {
+			Logger.Println(err.Error())
 			handleUnexpectedError(w, err)
 			return
 		}
@@ -459,27 +552,27 @@ func getUserFromSession(r *http.Request) (urepo.User, bool) {
 
 func ensureAuthed(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    authHeader := r.Header.Get("Authorization")
-    if authHeader == "" {
-      _, ok := getUserFromSession(r)
-      if ok {
-        next.ServeHTTP(w, r)
-      } else {
-        http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-        return
-      }
-    } else {
-      key, present := os.LookupEnv("AUTH_KEY")
-      if present && key == authHeader {
-        next.ServeHTTP(w, r)
-      } else if present && key != authHeader{
-        http.Error(w, "Could not authenticate request", http.StatusUnauthorized)
-        return
-      } else {
-        http.Error(w, "Could not authenticate request", http.StatusInternalServerError)
-        Logger.Println("AUTH_KEY not found in environment")
-        return
-      }
-    }
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			_, ok := getUserFromSession(r)
+			if ok {
+				next.ServeHTTP(w, r)
+			} else {
+				http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+				return
+			}
+		} else {
+			key, present := os.LookupEnv("AUTH_KEY")
+			if present && key == authHeader {
+				next.ServeHTTP(w, r)
+			} else if present && key != authHeader {
+				http.Error(w, "Could not authenticate request", http.StatusUnauthorized)
+				return
+			} else {
+				http.Error(w, "Could not authenticate request", http.StatusInternalServerError)
+				Logger.Println("AUTH_KEY not found in environment")
+				return
+			}
+		}
 	})
 }
