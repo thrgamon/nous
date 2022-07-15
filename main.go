@@ -472,7 +472,7 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 }
 
 func cacheTemplates() {
-	re := regexp.MustCompile(`^[a-zA-Z\/]*\.html`)
+	re := regexp.MustCompile(`[a-zA-Z\/]*\.html`)
 	templates := make(map[string]*template.Template)
 	// Walk the template directory and parse all templates that aren't fragments
 	err := filepath.WalkDir("views",
@@ -481,7 +481,7 @@ func cacheTemplates() {
 				return err
 			}
 
-			if re.MatchString(path) {
+			if path != "_header.html" && path != "_footer.html" && re.MatchString(path) {
 				normalisedPath := strings.TrimSuffix(strings.TrimPrefix(path, "views/"), ".html")
 				templates[normalisedPath] = template.Must(
 					template.ParseFiles(path, "views/_header.html", "views/_footer.html"),
