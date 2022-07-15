@@ -84,7 +84,7 @@ func (rr NoteRepo) GetByTag(ctx context.Context, tag string) ([]Note, error) {
     FROM
       note_search
   	WHERE
-  		$1 = ANY(tags)
+  		$1 = ANY(tags) AND done=false
     ORDER BY
       note_search.id DESC`,
 		tag,
