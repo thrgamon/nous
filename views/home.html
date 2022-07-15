@@ -14,4 +14,8 @@
   {{ template "note" . }}
   {{end}}
   </div>
+<div class="prev-next">
+  <a href="/t/{{.PreviousDay}}">&larr;</a>
+  <a href="/t/{{.NextDay}}">&rarr;</a>
+</div>
 {{template "footer" .}}
