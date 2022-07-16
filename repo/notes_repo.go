@@ -337,7 +337,7 @@ FROM (
 	FROM
 		note_search
 	WHERE
-		note_search.doc @@ to_tsquery($1)
+		note_search.doc @@ to_tsquery($1) AND done = false
 	ORDER BY
 		rank DESC,
 		inserted_at DESC) subtable`,
