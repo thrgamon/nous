@@ -33,7 +33,7 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	}
 }
 
-func cacheTemplates() map[string]*template.Template{
+func cacheTemplates() map[string]*template.Template {
 	re := regexp.MustCompile(`[a-zA-Z\/]*\.html`)
 	templates := make(map[string]*template.Template)
 	// Walk the template directory and parse all templates that aren't fragments
@@ -57,5 +57,5 @@ func cacheTemplates() map[string]*template.Template{
 		log.Fatal(err.Error())
 	}
 
-  return templates
+	return templates
 }

@@ -1,19 +1,17 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/thrgamon/go-utils/env"
 	urepo "github.com/thrgamon/go-utils/repo/user"
 	"github.com/thrgamon/go-utils/web/authentication"
+	isoDate "github.com/thrgamon/nous/iso_date"
 	"github.com/thrgamon/nous/repo"
 
 	"github.com/gorilla/handlers"
@@ -30,11 +28,11 @@ const (
 )
 
 var (
-  DB *pgxpool.Pool
-  Templates map[string]*template.Template
-  Logger *log.Logger
-  Store *sessions.CookieStore
-  ENV Environment
+	DB        *pgxpool.Pool
+	Templates map[string]*template.Template
+	Logger    *log.Logger
+	Store     *sessions.CookieStore
+	ENV       Environment
 )
 
 func init() {
@@ -45,7 +43,6 @@ func init() {
 	}
 
 	DB = initDB()
-	defer DB.Close()
 
 	Templates = cacheTemplates()
 
@@ -58,6 +55,7 @@ func init() {
 }
 
 func main() {
+	defer DB.Close()
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
@@ -106,40 +104,6 @@ type PageData struct {
 	CurrentDay  string
 }
 
-type IsoDate struct {
-	t time.Time
-}
-
-func newIsoDateFromString(isoString string) (*IsoDate, error) {
-	parsedTime, err := time.Parse(time.RFC3339, isoString+"T00:00:00+11:00")
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &IsoDate{parsedTime}, nil
-}
-
-func newIsoDate() *IsoDate {
-	return &IsoDate{time.Now()}
-}
-
-func (isoDate *IsoDate) stringify() string {
-	return fmt.Sprintf("%d-%02d-%02d", isoDate.t.Year(), int(isoDate.t.Month()), isoDate.t.Day())
-}
-
-func (isoDate *IsoDate) timify() time.Time {
-	return isoDate.t
-}
-
-func (isoDate *IsoDate) nextDay() *IsoDate {
-	return &IsoDate{isoDate.t.AddDate(0, 0, 1)}
-}
-
-func (isoDate *IsoDate) previousDay() *IsoDate {
-	return &IsoDate{isoDate.t.AddDate(0, 0, -1)}
-}
-
 func TestHandler(w http.ResponseWriter, r *http.Request) {
 	noteRepo := repo.NewNoteRepo(DB, Logger)
 	notes, err := noteRepo.GetByTag(r.Context(), "todo")
@@ -159,11 +123,11 @@ func TestHandler(w http.ResponseWriter, r *http.Request) {
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	date, ok := vars["date"]
-	t := newIsoDate()
-	var nextDay *IsoDate
+	t := isoDate.NewIsoDate()
+	var nextDay *isoDate.IsoDate
 
 	if ok {
-		isoDate, err := newIsoDateFromString(date)
+		isoDate, err := isoDate.NewIsoDateFromString(date)
 
 		if err != nil {
 			handleUnexpectedError(w, err)
@@ -172,11 +136,11 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 		t = isoDate
 	}
-	nextDay = t.nextDay()
-	previousDay := t.previousDay()
+	nextDay = t.NextDay()
+	previousDay := t.PreviousDay()
 
 	noteRepo := repo.NewNoteRepo(DB, Logger)
-	notes, err := noteRepo.GetAllSince(r.Context(), t.t)
+	notes, err := noteRepo.GetAllSince(r.Context(), t.Time)
 
 	if err != nil {
 		handleUnexpectedError(w, err)
@@ -185,9 +149,9 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	pageData := PageData{
 		Notes:       notes,
-		PreviousDay: previousDay.stringify(),
-		NextDay:     nextDay.stringify(),
-		CurrentDay:  t.stringify(),
+		PreviousDay: previousDay.Stringify(),
+		NextDay:     nextDay.Stringify(),
+		CurrentDay:  t.Stringify(),
 	}
 
 	RenderTemplate(w, "home", pageData)
@@ -197,101 +161,6 @@ func TodoHandler(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "todo", PageData{})
 }
 func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-
-func NoteHandler(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	RenderTemplate(w, "_toggle", note)
-}
-
-type DoneApiPayload struct {
-	Id string `json:"id"`
-}
-
-func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	_, err := noteRepo.ToggleDone(r.Context(), repo.NoteID(id))
-	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	RenderTemplate(w, "_toggle", note)
-}
-
-func EditNoteHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
-
-	if err != nil {
-		Logger.Println(err.Error())
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	RenderTemplate(w, "_edit", note)
-}
-
-func UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	r.ParseForm()
-
-	body := r.FormValue("body")
-	tags := r.FormValue("tags")
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	err := noteRepo.Edit(r.Context(), repo.NoteID(id), body, tags)
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	RenderTemplate(w, "_toggle", note)
-}
-
-func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
-	var payload DoneApiPayload
-
-	err := json.NewDecoder(r.Body).Decode(&payload)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	_, err = noteRepo.ToggleDone(r.Context(), repo.NoteID(payload.Id))
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -325,96 +194,6 @@ func ApiTodosHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(notes)
 }
 
-func ApiNotesHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
-	from := r.FormValue("from")
-	to := r.FormValue("to")
-	fromTime, err := newIsoDateFromString(from)
-	if err != nil {
-		Logger.Println(err.Error())
-		handleUnexpectedError(w, err)
-		return
-	}
-	toTime, err := newIsoDateFromString(to)
-	if err != nil {
-		Logger.Println(err.Error())
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	notes, err := noteRepo.GetAllBetween(r.Context(), fromTime.timify(), toTime.timify())
-
-	if err != nil {
-		Logger.Println(err.Error())
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(notes)
-}
-
-type EditApiPayload struct {
-	Id   string `json:"id"`
-	Body string `json:"body"`
-	Tags string `json:"tags"`
-}
-
-func ApiEditNoteHandler(w http.ResponseWriter, r *http.Request) {
-	var payload EditApiPayload
-
-	err := json.NewDecoder(r.Body).Decode(&payload)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	err = noteRepo.Edit(r.Context(), repo.NoteID(payload.Id), payload.Body, payload.Tags)
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	err := noteRepo.Delete(r.Context(), repo.NoteID(id))
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-func AddNoteHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-
-	body := r.FormValue("body")
-	tags := r.FormValue("tags")
-
-	noteRepo := repo.NewNoteRepo(DB, Logger)
-	err := noteRepo.Add(r.Context(), body, tags)
-
-	if err != nil {
-		handleUnexpectedError(w, err)
-		return
-	}
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
 func TagHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
@@ -432,6 +211,7 @@ func TagHandler(w http.ResponseWriter, r *http.Request) {
 
 	RenderTemplate(w, "home", pageData)
 }
+
 func SearchHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
@@ -448,81 +228,4 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 	pageData := PageData{Notes: notes}
 
 	RenderTemplate(w, "home", pageData)
-}
-
-func initDB() *pgxpool.Pool {
-	conn, err := pgxpool.Connect(context.Background(), os.Getenv("DATABASE_URL"))
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return conn
-}
-
-// Handler for serving static assets with modified time to help
-// caching
-func serveResources(w http.ResponseWriter, r *http.Request) {
-	f, err := os.Open(filepath.Join(".", r.URL.Path))
-	if err != nil {
-		http.Error(w, r.RequestURI, http.StatusNotFound)
-		return
-	}
-	defer f.Close()
-
-	fi, err := f.Stat()
-	if err != nil {
-		http.Error(w, r.RequestURI, http.StatusNotFound)
-		return
-	}
-	modTime := fi.ModTime()
-
-	http.ServeContent(w, r, r.URL.Path, modTime, f)
-}
-
-func handleUnexpectedError(w http.ResponseWriter, err error) {
-	http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
-}
-
-func getUserFromSession(r *http.Request) (urepo.User, bool) {
-	sessionState, err := Store.Get(r, "auth")
-	if err != nil {
-		println(err.Error())
-	}
-	userRepo := urepo.NewUserRepo(DB)
-	userId, ok := sessionState.Values["user_id"].(string)
-
-	if ok {
-		user, _ := userRepo.Get(r.Context(), urepo.Auth0ID(userId))
-		return user, true
-	} else {
-		return urepo.User{}, false
-	}
-}
-
-func ensureAuthed(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			_, ok := getUserFromSession(r)
-			if ok {
-				next.ServeHTTP(w, r)
-			} else {
-				http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
-				return
-			}
-		} else {
-			key, present := os.LookupEnv("AUTH_KEY")
-			if present && key == authHeader {
-				next.ServeHTTP(w, r)
-			} else if present && key != authHeader {
-				http.Error(w, "Could not authenticate request", http.StatusUnauthorized)
-				return
-			} else {
-				http.Error(w, "Could not authenticate request", http.StatusInternalServerError)
-				Logger.Println("AUTH_KEY not found in environment")
-				return
-			}
-		}
-	})
 }
