@@ -20,11 +20,9 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
 )
 
 var (
-	Store *sessions.CookieStore
 )
 
 func init() {
@@ -38,11 +36,11 @@ func init() {
 	database.Init()
 	logger.Init()
 	templates.Init(e)
+  web.Init()
 
-	Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 	authentication.Logger = logger.Logger
 	authentication.UserRepo = urepo.NewUserRepo(database.Database)
-	authentication.Store = Store
+	authentication.Store = web.Store
 }
 
 func main() {
@@ -54,7 +52,7 @@ func main() {
 	r.HandleFunc("/healthcheck", HealthcheckHandler)
 
 	authedRouter := r.NewRoute().Subrouter()
-	authedRouter.Use(ensureAuthed)
+	authedRouter.Use(web.EnsureAuthed)
 
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
@@ -97,7 +95,7 @@ type PageData struct {
 }
 
 func TestHandler(w http.ResponseWriter, r *http.Request) {
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	notes, err := noteRepo.GetByTag(r.Context(), "todo")
 
 	if err != nil {
@@ -131,7 +129,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	nextDay = t.NextDay()
 	previousDay := t.PreviousDay()
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	notes, err := noteRepo.GetAllSince(r.Context(), t.Time)
 
 	if err != nil {
@@ -157,7 +155,7 @@ func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	notes, err := noteRepo.GetByTag(r.Context(), "to read")
 
 	if err != nil {
@@ -172,7 +170,7 @@ func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ApiTodosHandler(w http.ResponseWriter, r *http.Request) {
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	notes, err := noteRepo.GetByTag(r.Context(), "todo")
 
 	if err != nil {
@@ -191,7 +189,7 @@ func TagHandler(w http.ResponseWriter, r *http.Request) {
 
 	tag := r.FormValue("tag")
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	notes, err := noteRepo.GetByTag(r.Context(), tag)
 
 	if err != nil {
@@ -209,7 +207,7 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.FormValue("query")
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	notes, err := noteRepo.Search(r.Context(), query)
 
 	if err != nil {

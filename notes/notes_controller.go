@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/thrgamon/nous/database"
 	isoDate "github.com/thrgamon/nous/iso_date"
 	"github.com/thrgamon/nous/logger"
 	"github.com/thrgamon/nous/repo"
@@ -13,10 +12,11 @@ import (
 	"github.com/thrgamon/nous/web"
 )
 
+
 func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
 
 	if err != nil {
@@ -35,7 +35,7 @@ func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	_, err := noteRepo.ToggleDone(r.Context(), repo.NoteID(id))
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
 
@@ -51,7 +51,7 @@ func EditNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
 
 	if err != nil {
@@ -72,7 +72,7 @@ func UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
 	body := r.FormValue("body")
 	tags := r.FormValue("tags")
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	err := noteRepo.Edit(r.Context(), repo.NoteID(id), body, tags)
 	if err != nil {
 		web.HandleUnexpectedError(w, err)
@@ -97,7 +97,7 @@ func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	_, err = noteRepo.ToggleDone(r.Context(), repo.NoteID(payload.Id))
 
 	if err != nil {
@@ -126,7 +126,7 @@ func ApiNotesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	notes, err := noteRepo.GetAllBetween(r.Context(), fromTime.Timify(), toTime.Timify())
 
 	if err != nil {
@@ -155,7 +155,7 @@ func ApiEditNoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	err = noteRepo.Edit(r.Context(), repo.NoteID(payload.Id), payload.Body, payload.Tags)
 
 	if err != nil {
@@ -170,7 +170,7 @@ func DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	err := noteRepo.Delete(r.Context(), repo.NoteID(id))
 
 	if err != nil {
@@ -187,7 +187,7 @@ func CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
 	body := r.FormValue("body")
 	tags := r.FormValue("tags")
 
-	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
+	noteRepo := repo.NewNoteRepo()
 	err := noteRepo.Add(r.Context(), body, tags)
 
 	if err != nil {

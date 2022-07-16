@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+  "github.com/thrgamon/nous/database"
+  "github.com/thrgamon/nous/logger"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/yuin/goldmark"
@@ -34,7 +36,10 @@ type NoteRepo struct {
 	logger *log.Logger
 }
 
-func NewNoteRepo(db *pgxpool.Pool, logger *log.Logger) *NoteRepo {
+
+func NewNoteRepo() *NoteRepo {
+  db := database.Database
+  logger := logger.Logger
 	return &NoteRepo{db: db, logger: logger}
 }
 

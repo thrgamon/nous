@@ -1,13 +1,20 @@
-package main
+package web
 
 import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/sessions"
 	urepo "github.com/thrgamon/go-utils/repo/user"
 	"github.com/thrgamon/nous/logger"
 	"github.com/thrgamon/nous/database"
 )
+
+var Store *sessions.CookieStore
+
+func Init() {
+  Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+}
 
 func getUserFromSession(r *http.Request) (urepo.User, bool) {
 	sessionState, err := Store.Get(r, "auth")
@@ -25,7 +32,7 @@ func getUserFromSession(r *http.Request) (urepo.User, bool) {
 	}
 }
 
-func ensureAuthed(next http.Handler) http.Handler {
+func EnsureAuthed(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
