@@ -5,6 +5,8 @@ import (
 	"os"
 
 	urepo "github.com/thrgamon/go-utils/repo/user"
+	"github.com/thrgamon/nous/logger"
+	"github.com/thrgamon/nous/database"
 )
 
 func getUserFromSession(r *http.Request) (urepo.User, bool) {
@@ -12,7 +14,7 @@ func getUserFromSession(r *http.Request) (urepo.User, bool) {
 	if err != nil {
 		println(err.Error())
 	}
-	userRepo := urepo.NewUserRepo(DB)
+	userRepo := urepo.NewUserRepo(database.Database)
 	userId, ok := sessionState.Values["user_id"].(string)
 
 	if ok {
@@ -43,7 +45,7 @@ func ensureAuthed(next http.Handler) http.Handler {
 				return
 			} else {
 				http.Error(w, "Could not authenticate request", http.StatusInternalServerError)
-				Logger.Println("AUTH_KEY not found in environment")
+				logger.Logger.Println("AUTH_KEY not found in environment")
 				return
 			}
 		}

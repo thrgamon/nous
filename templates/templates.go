@@ -1,4 +1,4 @@
-package main
+package templates
 
 import (
 	"html/template"
@@ -8,17 +8,29 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/thrgamon/nous/environment"
+	"github.com/thrgamon/nous/logger"
+	"github.com/thrgamon/nous/web"
 )
+
+var Templates map[string]*template.Template
+var ENV environment.Environment
+
+func Init(env environment.Environment) {
+	Templates = cacheTemplates()
+	ENV = env
+}
 
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 	// In production we want to read the cached templates, whereas in development
 	// we want to interpret them every time to make it easier to change
-	if ENV == Production {
+	if ENV == environment.Production {
 		err := Templates[tmpl].Execute(w, data)
 
 		if err != nil {
-			Logger.Println(err.Error())
-			handleUnexpectedError(w, err)
+			logger.Logger.Println(err.Error())
+			web.HandleUnexpectedError(w, err)
 			return
 		}
 	} else {
@@ -26,8 +38,8 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 		err := template.Execute(w, data)
 
 		if err != nil {
-			Logger.Println(err.Error())
-			handleUnexpectedError(w, err)
+			logger.Logger.Println(err.Error())
+			web.HandleUnexpectedError(w, err)
 			return
 		}
 	}

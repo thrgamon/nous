@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"net/http"
@@ -8,7 +8,7 @@ import (
 
 // Handler for serving static assets with modified time to help
 // caching
-func serveResources(w http.ResponseWriter, r *http.Request) {
+func ServeResources(w http.ResponseWriter, r *http.Request) {
 	f, err := os.Open(filepath.Join(".", r.URL.Path))
 	if err != nil {
 		http.Error(w, r.RequestURI, http.StatusNotFound)
@@ -26,6 +26,6 @@ func serveResources(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, r.URL.Path, modTime, f)
 }
 
-func handleUnexpectedError(w http.ResponseWriter, err error) {
+func HandleUnexpectedError(w http.ResponseWriter, err error) {
 	http.Error(w, "There was an unexpected error", http.StatusInternalServerError)
 }

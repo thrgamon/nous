@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"context"
@@ -8,12 +8,14 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-func initDB() *pgxpool.Pool {
+var Database *pgxpool.Pool
+
+func Init() {
 	conn, err := pgxpool.Connect(context.Background(), os.Getenv("DATABASE_URL"))
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	return conn
+	Database = conn
 }

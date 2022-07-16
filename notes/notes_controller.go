@@ -1,26 +1,30 @@
-package main
+package notes
 
 import (
 	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/thrgamon/nous/database"
 	isoDate "github.com/thrgamon/nous/iso_date"
+	"github.com/thrgamon/nous/logger"
 	"github.com/thrgamon/nous/repo"
+	"github.com/thrgamon/nous/templates"
+	"github.com/thrgamon/nous/web"
 )
 
-func NoteHandler(w http.ResponseWriter, r *http.Request) {
+func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
 
 	if err != nil {
-		handleUnexpectedError(w, err)
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
-	RenderTemplate(w, "_toggle", note)
+	templates.RenderTemplate(w, "_toggle", note)
 }
 
 type DoneApiPayload struct {
@@ -31,32 +35,32 @@ func ToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	_, err := noteRepo.ToggleDone(r.Context(), repo.NoteID(id))
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
 
 	if err != nil {
-		handleUnexpectedError(w, err)
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
-	RenderTemplate(w, "_toggle", note)
+	templates.RenderTemplate(w, "_toggle", note)
 }
 
 func EditNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
 
 	if err != nil {
-		Logger.Println(err.Error())
-		handleUnexpectedError(w, err)
+		logger.Logger.Println(err.Error())
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
-	RenderTemplate(w, "_edit", note)
+	templates.RenderTemplate(w, "_edit", note)
 }
 
 func UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -68,20 +72,20 @@ func UpdateNoteHandler(w http.ResponseWriter, r *http.Request) {
 	body := r.FormValue("body")
 	tags := r.FormValue("tags")
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	err := noteRepo.Edit(r.Context(), repo.NoteID(id), body, tags)
 	if err != nil {
-		handleUnexpectedError(w, err)
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))
 	if err != nil {
-		handleUnexpectedError(w, err)
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
-	RenderTemplate(w, "_toggle", note)
+	templates.RenderTemplate(w, "_toggle", note)
 }
 
 func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
@@ -93,11 +97,11 @@ func ApiToggleNoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	_, err = noteRepo.ToggleDone(r.Context(), repo.NoteID(payload.Id))
 
 	if err != nil {
-		handleUnexpectedError(w, err)
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
@@ -111,23 +115,23 @@ func ApiNotesHandler(w http.ResponseWriter, r *http.Request) {
 	to := r.FormValue("to")
 	fromTime, err := isoDate.NewIsoDateFromString(from)
 	if err != nil {
-		Logger.Println(err.Error())
-		handleUnexpectedError(w, err)
+		logger.Logger.Println(err.Error())
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 	toTime, err := isoDate.NewIsoDateFromString(to)
 	if err != nil {
-		Logger.Println(err.Error())
-		handleUnexpectedError(w, err)
+		logger.Logger.Println(err.Error())
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	notes, err := noteRepo.GetAllBetween(r.Context(), fromTime.Timify(), toTime.Timify())
 
 	if err != nil {
-		Logger.Println(err.Error())
-		handleUnexpectedError(w, err)
+		logger.Logger.Println(err.Error())
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
@@ -151,11 +155,11 @@ func ApiEditNoteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	err = noteRepo.Edit(r.Context(), repo.NoteID(payload.Id), payload.Body, payload.Tags)
 
 	if err != nil {
-		handleUnexpectedError(w, err)
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
@@ -166,28 +170,28 @@ func DeleteNoteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	err := noteRepo.Delete(r.Context(), repo.NoteID(id))
 
 	if err != nil {
-		handleUnexpectedError(w, err)
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func AddNoteHandler(w http.ResponseWriter, r *http.Request) {
+func CreateNoteHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	body := r.FormValue("body")
 	tags := r.FormValue("tags")
 
-	noteRepo := repo.NewNoteRepo(DB, Logger)
+	noteRepo := repo.NewNoteRepo(database.Database, logger.Logger)
 	err := noteRepo.Add(r.Context(), body, tags)
 
 	if err != nil {
-		handleUnexpectedError(w, err)
+		web.HandleUnexpectedError(w, err)
 		return
 	}
 
