@@ -1,0 +1,10 @@
+{{template "header" .}}
+  <div class="grid-note">
+  {{ range .Notes }}
+  <div class="under-review">
+  {{ template "note" . }}
+  <button hx-patch="/note/{{.ID}}/review" hx-target="closest .under-review" hx-swap="delete">Reviewed</button>
+  </div>
+  {{end}}
+  </div>
+{{template "footer" .}}

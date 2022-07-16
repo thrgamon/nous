@@ -6,14 +6,14 @@ import (
 
 	"github.com/gorilla/sessions"
 	urepo "github.com/thrgamon/go-utils/repo/user"
-	"github.com/thrgamon/nous/logger"
 	"github.com/thrgamon/nous/database"
+	"github.com/thrgamon/nous/logger"
 )
 
 var Store *sessions.CookieStore
 
 func Init() {
-  Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+	Store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 }
 
 func getUserFromSession(r *http.Request) (urepo.User, bool) {

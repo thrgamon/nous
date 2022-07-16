@@ -10,7 +10,6 @@ import (
 	"github.com/thrgamon/nous/web"
 )
 
-
 func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -40,9 +39,20 @@ func ToggleHandler(w http.ResponseWriter, r *http.Request) {
 	templates.RenderTemplate(w, "_note", note)
 }
 
-func EditHandler(w http.ResponseWriter, r *http.Request) {
+func ReviewedHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
+	noteRepo := repo.NewNoteRepo()
+	if err := noteRepo.MarkReviewed(r.Context(), repo.NoteID(id)); err != nil {
+		web.HandleUnexpectedError(w, err)
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+func EditHandler(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
 
 	noteRepo := repo.NewNoteRepo()
 	note, err := noteRepo.Get(r.Context(), repo.NoteID(id))

@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-  "github.com/thrgamon/nous/database"
-  "github.com/thrgamon/nous/logger"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/thrgamon/nous/database"
+	"github.com/thrgamon/nous/logger"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -36,10 +36,9 @@ type NoteRepo struct {
 	logger *log.Logger
 }
 
-
 func NewNoteRepo() *NoteRepo {
-  db := database.Database
-  logger := logger.Logger
+	db := database.Database
+	logger := logger.Logger
 	return &NoteRepo{db: db, logger: logger}
 }
 
@@ -161,6 +160,35 @@ func (rr NoteRepo) parseData(rows pgx.Rows) ([]Note, error) {
 	return notes, nil
 }
 
+func (rr NoteRepo) GetForReview(ctx context.Context) ([]Note, error) {
+	var notes []Note
+	rows, err := rr.db.Query(
+		ctx,
+		`SELECT
+      notes.id,
+      body,
+      array_agg(DISTINCT COALESCE(tags.tag, '')) AS tags,
+      done,
+      notes.inserted_at
+    FROM
+      notes
+      JOIN tags on tags.note_id = notes.id
+    WHERE
+      reviewed_at IS NULL
+    GROUP BY
+      notes.id
+    ORDER BY
+      notes.id DESC`,
+	)
+	defer rows.Close()
+
+	if err != nil {
+		rr.logger.Println(err.Error())
+		return notes, err
+	}
+
+	return rr.parseData(rows)
+}
 func (rr NoteRepo) GetAllBetween(ctx context.Context, from time.Time, to time.Time) ([]Note, error) {
 	var notes []Note
 	rows, err := rr.db.Query(
@@ -194,6 +222,11 @@ func (rr NoteRepo) ToggleDone(ctx context.Context, noteId NoteID) (bool, error) 
 	var done bool
 	err := rr.db.QueryRow(ctx, "UPDATE notes SET done = NOT done WHERE id = $1 RETURNING done", noteId).Scan(&done)
 	return done, err
+}
+
+func (rr NoteRepo) MarkReviewed(ctx context.Context, noteId NoteID) error {
+	_, err := rr.db.Exec(ctx, "UPDATE notes SET reviewed_at = NOW() WHERE id = $1", noteId)
+	return err
 }
 
 func (rr NoteRepo) Delete(ctx context.Context, noteId NoteID) error {

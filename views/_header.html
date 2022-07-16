@@ -28,35 +28,46 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon/favicon-16x16.png">
 </head> 
 <body>
+  <header>
+    <h1><a href="/">Nous</a></h1>
+    <nav>
+      <a href="/tag?tag=todo">Todos</a>
+      <a href="/tag?tag=to read">Readings</a>
+      <form action="/search" method="get">
+        <input type="text" name="query" required placeholder="search">
+        <input type="submit" value="Search">
+      </form>
+    </nav>
+  </header>
 {{ end }}
 
 {{ define "note" }}
-  <div class="note {{if .Done}} done {{end}}">
+<div class="note {{if .Done}} done {{end}}" data-note-id="{{.ID}}">
   <a name={{.ID}}></a>
-    <div class="controls">
-      <input
-        name="done"
-        type="checkbox"
-        {{if .Done}}checked{{end}}
-        hx-post="/note/{{.ID}}/toggle"
-        hx-target="closest .note"
-        hx-swap="outerHTML"
-      />
+  <div class="controls">
+    <input
+      name="done"
+      type="checkbox"
+      {{if .Done}}checked{{end}}
+      hx-post="/note/{{.ID}}/toggle"
+      hx-target="closest .note"
+      hx-swap="outerHTML"
+    />
     <div class="emoji-button" hx-get="/note/{{.ID}}/edit" hx-target="closest .note" hx-swap="outerHTML">&#128397;</div>
     <div class="emoji-button" hx-get="/note/{{.ID}}/delete" hx-target="closest .note" hx-swap="delete">&#x1F5D1;</div>
-    </div>
-      <div class="content">
-        {{.DisplayBody}}
-     </div>
-<div class="metadata">
-<ul class="tags text-subdued">
-    {{ range .Tags}} 
-    <li class="tag">
-        <a href="/tag?tag={{.}}">{{.}}</a>
-    </li>
-      {{end}}
-</ul>
-    </div>
-    <hr>
   </div>
+  <div class="content">
+    {{.DisplayBody}}
+  </div>
+  <div class="metadata">
+    <ul class="tags text-subdued">
+      {{ range .Tags}} 
+      <li class="tag">
+        <a href="/tag?tag={{.}}">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  <hr>
+</div>
 {{end}}

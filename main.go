@@ -22,9 +22,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var (
-)
-
 func init() {
 	var e environment.Environment
 	if env.GetEnvWithFallback("ENV", "production") == "development" {
@@ -36,7 +33,7 @@ func init() {
 	database.Init()
 	logger.Init()
 	templates.Init(e)
-  web.Init()
+	web.Init()
 
 	authentication.Logger = logger.Logger
 	authentication.UserRepo = urepo.NewUserRepo(database.Database)
@@ -46,6 +43,7 @@ func init() {
 func main() {
 	defer database.Database.Close()
 	r := mux.NewRouter()
+	r.HandleFunc("/", HomeHandler)
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
 	r.HandleFunc("/callback", authentication.CallbackHandler)
@@ -55,6 +53,7 @@ func main() {
 	authedRouter.Use(web.EnsureAuthed)
 
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
+	authedRouter.HandleFunc("/review", ReviewHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
 	authedRouter.HandleFunc("/tag", TagHandler)
 
@@ -64,13 +63,11 @@ func main() {
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/edit", notes.EditHandler).Methods("GET")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/edit", notes.UpdateHandler).Methods("PUT")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/toggle", notes.ToggleHandler)
+	authedRouter.HandleFunc("/note/{id:[0-9]+}/review", notes.ReviewedHandler).Methods("PATCH")
 	authedRouter.HandleFunc("/api/todos", ApiTodosHandler).Methods("GET")
 	authedRouter.HandleFunc("/api/readings", ApiReadingHandler).Methods("GET")
 
 	authedRouter.PathPrefix("/public/").HandlerFunc(web.ServeResources)
-
-	// Catchall router
-	r.PathPrefix("/").HandlerFunc(HomeHandler)
 
 	srv := &http.Server{
 		Handler:      handlers.LoggingHandler(os.Stdout, r),
@@ -142,6 +139,21 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templates.RenderTemplate(w, "home", pageData)
+}
+
+func ReviewHandler(w http.ResponseWriter, r *http.Request) {
+	notes, err := repo.NewNoteRepo().GetForReview(r.Context())
+
+	if err != nil {
+		web.HandleUnexpectedError(w, err)
+		return
+	}
+
+	pageData := PageData{
+		Notes: notes,
+	}
+
+	templates.RenderTemplate(w, "review", pageData)
 }
 
 func TodoHandler(w http.ResponseWriter, r *http.Request) {

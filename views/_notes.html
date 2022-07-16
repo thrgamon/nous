@@ -1,36 +1,5 @@
   <div class="grid-note">
-    {#each notes as note}
-      <div class="note" class:done={note.done}>
-        <a name={note.id} />
-        <div class="controls">
-          <input
-            name="done"
-            type="checkbox"
-            checked={note.done}
-            on:change={() => toggle(note.id)}
-          />
-          <div class="emoji-button" on:click={()=>toggleEdit(note.id)}>
-            {#if editingId === note.id}
-              &#10060;
-            {:else}
-              &#128397;
-            {/if}
-          </div>
-          <div class="emoji-button" on:click={() => location.href=`/note/${note.id}/delete`}>&#x1F5D1;</div>
-        </div>
-          <div class="content">
-        {#if editingId === note.id}
-        <div class="note submit" >
-          <textarea type="text" name="body" required bind:value={editingBody}/>
-          <input type="text" name="tags" placeholder="use comma 'seperated values'" bind:value={editingTags} autocorrect="off" autocapitalize="none"/>
-          <input type="submit" value="Submit" on:click={()=>handleEdit(note.id)}/>
-        </div>
-        {:else}
-        {@html marked(note.body)}
-          <Metadata tags={note.tags}/>
-        {/if}
-         </div>
-        <hr>
-      </div>
-    {/each}
+  {{ range .Notes }}
+  {{ template "note" . }}
+  {{end}}
   </div>

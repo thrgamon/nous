@@ -1,15 +1,4 @@
 {{template "header" .}}
-  <header>
-    <h1><a href="/">Nous</a></h1>
-    <nav>
-      <a href="/tag?tag=todo">Todos</a>
-      <a href="/tag?tag=to read">Readings</a>
-      <form action="/search" method="get">
-        <input type="text" name="query" required placeholder="search">
-        <input type="submit" value="Search">
-      </form>
-    </nav>
-  </header>
 <div class="prev-next">
   <a href="/t/{{.PreviousDay}}">&larr;</a>
   <h2>{{.CurrentDay}}</h2>
