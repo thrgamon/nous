@@ -12,9 +12,9 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/yuin/goldmark"
-  "github.com/yuin/goldmark/extension"
-  "github.com/yuin/goldmark/parser"
-  "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
 type NoteID string
@@ -103,16 +103,16 @@ func (rr NoteRepo) GetByTag(ctx context.Context, tag string) ([]Note, error) {
 }
 
 func (rr NoteRepo) parseData(rows pgx.Rows) ([]Note, error) {
-    md := goldmark.New(
-              goldmark.WithExtensions(extension.GFM),
-              goldmark.WithParserOptions(
-                  parser.WithAutoHeadingID(),
-              ),
-              goldmark.WithRendererOptions(
-                  html.WithHardWraps(),
-                  html.WithXHTML(),
-              ),
-          )
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.GFM),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(),
+		),
+		goldmark.WithRendererOptions(
+			html.WithHardWraps(),
+			html.WithXHTML(),
+		),
+	)
 	var notes []Note
 	var err error
 

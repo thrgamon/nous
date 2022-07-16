@@ -29,13 +29,15 @@ const (
 	Development
 )
 
-var DB *pgxpool.Pool
-var Templates map[string]*template.Template
-var Logger *log.Logger
-var Store *sessions.CookieStore
-var ENV Environment
+var (
+  DB *pgxpool.Pool
+  Templates map[string]*template.Template
+  Logger *log.Logger
+  Store *sessions.CookieStore
+  ENV Environment
+)
 
-func main() {
+func init() {
 	if env.GetEnvWithFallback("ENV", "production") == "development" {
 		ENV = Development
 	} else {
@@ -53,16 +55,19 @@ func main() {
 	authentication.Logger = Logger
 	authentication.UserRepo = urepo.NewUserRepo(DB)
 	authentication.Store = Store
+}
 
+func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
 	r.HandleFunc("/callback", authentication.CallbackHandler)
 	r.HandleFunc("/healthcheck", HealthcheckHandler)
+
 	authedRouter := r.NewRoute().Subrouter()
 	authedRouter.Use(ensureAuthed)
-	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 
+	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
 	authedRouter.HandleFunc("/tag", TagHandler)
 	authedRouter.HandleFunc("/note", AddNoteHandler)
