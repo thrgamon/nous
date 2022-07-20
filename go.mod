@@ -13,6 +13,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/thrgamon/go-utils v0.1.3
 	github.com/yuin/goldmark v1.1.32
+	mvdan.cc/xurls/v2 v2.4.0
 )
 
 require (

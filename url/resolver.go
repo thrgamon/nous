@@ -1,6 +1,7 @@
 package url
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,7 +12,74 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/thrgamon/nous/links"
+	"github.com/thrgamon/nous/logger"
+	"mvdan.cc/xurls/v2"
 )
+
+func ExtractURLMetadata(body string) {
+	ctx := context.Background()
+	rxStrict := xurls.Strict()
+	urls := rxStrict.FindAllString(body, -1)
+	for _, v := range urls {
+		go ProcessURL(ctx, v)
+	}
+}
+
+func ProcessURL(ctx context.Context, url string) error {
+	linkRepo := links.NewLinkRepo()
+	exists, err := linkRepo.Exists(ctx, url)
+
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+
+	if exists {
+		logger.Logger.Println("Url already exits: ", url)
+		return nil
+	}
+
+	linkID, err := linkRepo.AddLink(ctx, url)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+
+	resolvedURL, err := Resolve(url)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+	err = linkRepo.EditLinkURL(ctx, linkID, resolvedURL)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+
+	title, err := GetTitle(resolvedURL)
+	if err != nil {
+		logger.Logger.Println(err.Error())
+	} else {
+		err = linkRepo.EditLinkTitle(ctx, linkID, title)
+		if err != nil {
+			logger.Logger.Println(err.Error())
+		}
+	}
+
+	archiveResponse, err := SubmitToArchive(resolvedURL, "https://web.archive.org/save")
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+	err = linkRepo.EditArchiveStatus(ctx, linkID, links.Pending, archiveResponse.JobID, "")
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		return err
+	}
+
+	return nil
+}
 
 func Resolve(url string) (string, error) {
 	resp, err := http.Head(url)
@@ -19,30 +87,34 @@ func Resolve(url string) (string, error) {
 }
 
 func GetTitle(url string) (string, error) {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, strings.NewReader(""))
+	req.Header.Set("User-Agent", "Nous/1.1")
 	var title string
-	res, err := http.Get(url)
+	res, err := client.Do(req)
 	if err != nil {
+		logger.Logger.Println(err.Error())
 		return title, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != 200 {
-		println("status code error: %d %s", res.StatusCode, res.Status)
+		logger.Logger.Printf("status code error: %d %s\n", res.StatusCode, res.Status)
 		return title, err
 	}
 
-	// Load the HTML document
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 
 	if err != nil {
-		println(err.Error())
+		logger.Logger.Println(err.Error())
 		return title, err
 	}
 
-	// Find the review items
-	doc.Find("title").Each(func(i int, s *goquery.Selection) {
-		title = s.Text()
-	})
+	title = doc.Find("title").Text()
+
+	if title == "" {
+		logger.Logger.Println("No title found for url: ", url)
+	}
 
 	return title, nil
 }
@@ -71,7 +143,7 @@ func SubmitToArchive(url string, archiveURL string) (ArchiveResponse, error) {
 		return archiveResponse, err
 	}
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 		return archiveResponse, err
 	}
 
@@ -80,7 +152,7 @@ func SubmitToArchive(url string, archiveURL string) (ArchiveResponse, error) {
 	err = json.Unmarshal(buf, &archiveResponse)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 		return archiveResponse, err
 	}
 
@@ -102,7 +174,6 @@ func CheckArchiveJobStatus(jobID string, checkStatusURL string) (archiveURL stri
 
 	req, _ := http.NewRequest("GET", checkStatusURL, strings.NewReader(""))
 	req.Header.Add("Authorization", "LOW "+os.Getenv("ARCHIVE_ACCESS_KEY")+":"+os.Getenv("ARCHIVE_SECRET_KEY"))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("Accept", "application/json")
 
 	res, err := client.Do(req)
@@ -112,7 +183,7 @@ func CheckArchiveJobStatus(jobID string, checkStatusURL string) (archiveURL stri
 	}
 
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 		return archiveURL, err
 	}
 
@@ -121,7 +192,7 @@ func CheckArchiveJobStatus(jobID string, checkStatusURL string) (archiveURL stri
 	err = json.Unmarshal(buf, &jobStatusResponse)
 
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Logger.Println(err.Error())
 		return archiveURL, err
 	}
 

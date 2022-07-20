@@ -88,22 +88,6 @@ type PageData struct {
 	CurrentDay  string
 }
 
-func TestHandler(w http.ResponseWriter, r *http.Request) {
-	noteRepo := repo.NewNoteRepo()
-	notes, err := noteRepo.GetByTag(r.Context(), "todo")
-
-	if err != nil {
-		web.HandleUnexpectedError(w, err)
-		return
-	}
-
-	pageData := PageData{
-		Notes: notes,
-	}
-
-	templates.RenderTemplate(w, "test", pageData)
-}
-
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	date, ok := vars["date"]

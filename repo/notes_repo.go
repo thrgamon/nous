@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/thrgamon/nous/database"
 	"github.com/thrgamon/nous/logger"
+	"github.com/thrgamon/nous/url"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -271,9 +272,10 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 		return nil
 	})
 
+	go url.ExtractURLMetadata(body)
+
 	return error
 }
-
 func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags string) error {
 	error := rr.withTransaction(ctx, func() error {
 		_, err := rr.db.Exec(ctx, "UPDATE notes SET body=$1 WHERE notes.id = $2", body, noteId)
@@ -307,6 +309,8 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 		}
 		return nil
 	})
+
+	go url.ExtractURLMetadata(body)
 
 	return error
 }
