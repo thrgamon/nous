@@ -40,7 +40,7 @@ func EnsureAuthed(next http.Handler) http.Handler {
 			if ok {
 				next.ServeHTTP(w, r)
 			} else {
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 				return
 			}
 		} else {
