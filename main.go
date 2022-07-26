@@ -43,7 +43,6 @@ func init() {
 func main() {
 	defer database.Database.Close()
 	r := mux.NewRouter()
-	r.HandleFunc("/", HomeHandler)
 	r.HandleFunc("/login", authentication.LoginHandler)
 	r.HandleFunc("/logout", authentication.Logout)
 	r.HandleFunc("/callback", authentication.CallbackHandler)
@@ -52,6 +51,7 @@ func main() {
 	authedRouter := r.NewRoute().Subrouter()
 	authedRouter.Use(web.EnsureAuthed)
 
+	authedRouter.HandleFunc("/", HomeHandler)
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/review", ReviewHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
