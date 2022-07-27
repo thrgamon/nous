@@ -58,7 +58,6 @@ func main() {
 	authedRouter.HandleFunc("/tag", TagHandler)
 
 	authedRouter.HandleFunc("/note", notes.CreateHandler).Methods("POST")
-	authedRouter.HandleFunc("/note/create", notes.NewNoteHandler).Methods("GET")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}", notes.ViewNoteHandler).Methods("GET")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", notes.DeleteHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/edit", notes.EditHandler).Methods("GET")

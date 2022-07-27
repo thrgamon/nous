@@ -44,7 +44,7 @@
 {{ end }}
 
 {{ define "note" }}
-<div class="note {{if .Done}} done {{end}}" data-note-id="{{.ID}}" hx-swap-oob="afterbegin:.grid-note">
+<div class="note {{if .Done}} done {{end}}" data-note-id="{{.ID}}">
   <a name={{.ID}}></a>
   <div class="controls">
     <input
