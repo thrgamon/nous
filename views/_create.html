@@ -1,6 +1,6 @@
-<form class="submit" hx-post="/note" hx-target="this" hx-swap="outerHTML">
+<form class="submit" hx-post="/note" hx-target="this" hx-swap="delete">
   <textarea type="text" name="body" required autofocus ></textarea>
   <input type="text" name="tags" placeholder="use comma 'seperated values'" autocorrect="off" autocapitalize="none" />
   <input type="submit" value="Submit" />
 </form>
-{{template "note" . }}
+<button hx-get="/note/create" hx-swap="outerHTML" hx-target="this">New Note</button>

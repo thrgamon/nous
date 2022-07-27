@@ -10,6 +10,12 @@ import (
 	"github.com/thrgamon/nous/web"
 )
 
+
+type Data struct {}
+func NewNoteHandler(w http.ResponseWriter, r *http.Request) {
+	templates.RenderTemplate(w, "_create", Data{})
+}
+
 func ViewNoteHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -110,12 +116,18 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	tags := r.FormValue("tags")
 
 	noteRepo := repo.NewNoteRepo()
-	err := noteRepo.Add(r.Context(), body, tags)
+	noteID, err := noteRepo.Add(r.Context(), body, tags)
 
 	if err != nil {
 		web.HandleUnexpectedError(w, err)
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	note, err := noteRepo.Get(r.Context(), repo.NoteID(noteID))
+	if err != nil {
+		web.HandleUnexpectedError(w, err)
+		return
+	}
+
+	templates.RenderTemplate(w, "_note", note)
 }

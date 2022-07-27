@@ -244,9 +244,9 @@ func (rr NoteRepo) Delete(ctx context.Context, noteId NoteID) error {
 	return error
 }
 
-func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
+func (rr NoteRepo) Add(ctx context.Context, body string, tags string) (NoteID, error) {
+	var noteId int
 	error := rr.withTransaction(ctx, func() error {
-		var noteId int
 		err := rr.db.QueryRow(ctx, "INSERT INTO notes (body) VALUES ($1) RETURNING id", body).Scan(&noteId)
 
 		if err != nil {
@@ -274,7 +274,7 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 
 	go url.ExtractURLMetadata(body)
 
-	return error
+	return NoteID(fmt.Sprint(noteId)), error
 }
 func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags string) error {
 	error := rr.withTransaction(ctx, func() error {
