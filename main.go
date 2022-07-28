@@ -64,7 +64,7 @@ func main() {
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/edit", notes.UpdateHandler).Methods("PUT")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/toggle", notes.ToggleHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/review", notes.ReviewedHandler).Methods("PATCH")
-	authedRouter.HandleFunc("/api/todos", ApiTodosHandler).Methods("GET")
+	authedRouter.HandleFunc("/todos", TodoHandler).Methods("GET")
 	authedRouter.HandleFunc("/api/readings", ApiReadingHandler).Methods("GET")
 
 	authedRouter.PathPrefix("/public/").HandlerFunc(web.ServeResources)
@@ -140,9 +140,6 @@ func ReviewHandler(w http.ResponseWriter, r *http.Request) {
 	templates.RenderTemplate(w, "review", pageData)
 }
 
-func TodoHandler(w http.ResponseWriter, r *http.Request) {
-	templates.RenderTemplate(w, "todo", PageData{})
-}
 func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
@@ -162,19 +159,18 @@ func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(notes)
 }
 
-func ApiTodosHandler(w http.ResponseWriter, r *http.Request) {
+func TodoHandler(w http.ResponseWriter, r *http.Request) {
 	noteRepo := repo.NewNoteRepo()
-	notes, err := noteRepo.GetByTag(r.Context(), "todo")
+	notes, err := noteRepo.GetTodos(r.Context())
 
 	if err != nil {
-		logger.Logger.Println(err.Error())
 		web.HandleUnexpectedError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(notes)
+	pageData := PageData{Notes: notes}
+
+	templates.RenderTemplate(w, "home", pageData)
 }
 
 func TagHandler(w http.ResponseWriter, r *http.Request) {

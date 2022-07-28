@@ -315,6 +315,34 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 	return error
 }
 
+func (rr NoteRepo) GetTodos(ctx context.Context) ([]Note, error) {
+	var notes []Note
+
+	rows, err := rr.db.Query(
+		ctx,
+		`SELECT
+      note_search.id,
+      body,
+      tags,
+      done,
+      inserted_at
+    FROM
+      note_search
+  	WHERE
+  		'todo' = ANY(tags) OR body LIKE '%- [ ]%'
+    ORDER BY
+      note_search.id DESC`,
+	)
+	defer rows.Close()
+
+	if err != nil {
+		rr.logger.Println(err.Error())
+		return notes, err
+	}
+
+	return rr.parseData(rows)
+}
+
 func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, error) {
 	var notes []Note
 
