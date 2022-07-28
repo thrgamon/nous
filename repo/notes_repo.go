@@ -329,7 +329,7 @@ func (rr NoteRepo) GetTodos(ctx context.Context) ([]Note, error) {
     FROM
       note_search
   	WHERE
-  		'todo' = ANY(tags) OR body LIKE '%- [ ]%'
+  		('todo' = ANY(tags) OR body LIKE '%- [ ]%') AND done=false
     ORDER BY
       note_search.id DESC`,
 	)
