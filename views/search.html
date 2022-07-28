@@ -1,0 +1,13 @@
+{{template "header" .}}
+<input class="live-search" type="text" name="query"
+    hx-get="/live_search"
+    hx-trigger="keyup changed delay:500ms"
+    hx-target=".grid-note"
+    placeholder="Search..."
+>
+  <div class="grid-note">
+  {{ range .Notes }}
+  {{ template "note" . }}
+  {{end}}
+  </div>
+{{template "footer" .}}

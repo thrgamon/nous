@@ -1,0 +1,7 @@
+{{template "header" .}}
+  <div class="grid-note">
+  {{ range .Notes }}
+  {{ template "note" . }}
+  {{end}}
+  </div>
+{{template "footer" .}}

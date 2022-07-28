@@ -111,3 +111,8 @@ header h1 a {
 .search-form input {
   display: inline-block;
 }
+
+.live-search {
+  width: 90%;
+  margin: 1em auto;
+}

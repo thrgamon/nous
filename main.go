@@ -55,6 +55,7 @@ func main() {
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/review", ReviewHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
+	authedRouter.HandleFunc("/live_search", LiveSearchHandler)
 	authedRouter.HandleFunc("/tag", TagHandler)
 
 	authedRouter.HandleFunc("/note", notes.CreateHandler).Methods("POST")
@@ -170,7 +171,7 @@ func TodoHandler(w http.ResponseWriter, r *http.Request) {
 
 	pageData := PageData{Notes: notes}
 
-	templates.RenderTemplate(w, "home", pageData)
+	templates.RenderTemplate(w, "notes", pageData)
 }
 
 func TagHandler(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +189,25 @@ func TagHandler(w http.ResponseWriter, r *http.Request) {
 
 	pageData := PageData{Notes: notes}
 
-	templates.RenderTemplate(w, "home", pageData)
+	templates.RenderTemplate(w, "notes", pageData)
+}
+
+func LiveSearchHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	query := r.FormValue("query")
+
+	noteRepo := repo.NewNoteRepo()
+	notes, err := noteRepo.Search(r.Context(), query)
+
+	if err != nil {
+		web.HandleUnexpectedError(w, err)
+		return
+	}
+
+	pageData := PageData{Notes: notes}
+
+	templates.RenderTemplate(w, "_notes", pageData)
 }
 
 func SearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -206,5 +225,5 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	pageData := PageData{Notes: notes}
 
-	templates.RenderTemplate(w, "home", pageData)
+	templates.RenderTemplate(w, "search", pageData)
 }
