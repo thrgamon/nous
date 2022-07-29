@@ -64,6 +64,7 @@ func main() {
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/edit", notes.UpdateHandler).Methods("PUT")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/toggle", notes.ToggleHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/review", notes.ReviewedHandler).Methods("PATCH")
+	authedRouter.HandleFunc("/note/{id:[0-9]+}/todo/{todoIndex:[0-9]+}", notes.ToggleTodoHandler).Methods("PUT")
 	authedRouter.HandleFunc("/todos", TodoHandler).Methods("GET")
 	authedRouter.HandleFunc("/api/readings", ApiReadingHandler).Methods("GET")
 

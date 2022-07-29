@@ -12,7 +12,7 @@ require (
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/stretchr/testify v1.7.0
 	github.com/thrgamon/go-utils v0.1.3
-	github.com/yuin/goldmark v1.1.32
+	github.com/yuin/goldmark v1.4.13
 	mvdan.cc/xurls/v2 v2.4.0
 )
 

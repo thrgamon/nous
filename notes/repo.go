@@ -254,12 +254,12 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 			return err
 		}
 
-		if tags != "" {
-			splitTags := strings.Split(strings.TrimSpace(tags), ",")
+		combinedTags := assembleTags(body, tags)
 
+		if len(combinedTags) > 0 {
 			batch := &pgx.Batch{}
 
-			for _, string := range splitTags {
+			for _, string := range combinedTags {
 				fmtString := strings.TrimSpace(strings.ToLower(string))
 				batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
 			}
@@ -292,12 +292,12 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 			return err
 		}
 
-		if tags != "" {
-			splitTags := strings.Split(strings.TrimSpace(tags), ",")
+		combinedTags := assembleTags(body, tags)
 
+		if len(combinedTags) > 0 {
 			batch := &pgx.Batch{}
 
-			for _, string := range splitTags {
+			for _, string := range combinedTags {
 				fmtString := strings.TrimSpace(strings.ToLower(string))
 				batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
 			}
@@ -313,6 +313,19 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 	go url.ExtractURLMetadata(body)
 
 	return error
+}
+
+func assembleTags(body string, tags string) []string {
+	var mainTags []string
+	if tags != "" {
+		for _, tag := range strings.Split(strings.TrimSpace(tags), ",") {
+			if tag != "" {
+				mainTags = append(mainTags, tag)
+			}
+		}
+	}
+	peopleTags := ExtractPeople(body)
+	return append(mainTags, peopleTags...)
 }
 
 func (rr NoteRepo) GetTodos(ctx context.Context) ([]Note, error) {

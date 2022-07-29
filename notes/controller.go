@@ -2,6 +2,8 @@ package notes
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/thrgamon/nous/logger"
@@ -63,6 +65,28 @@ func EditHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	templates.RenderTemplate(w, "_edit", note)
+}
+
+func ToggleTodoHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	todoIndex := vars["todoIndex"]
+
+	noteRepo := NewNoteRepo()
+	note, err := noteRepo.Get(r.Context(), NoteID(id))
+	ti, _ := strconv.Atoi(todoIndex)
+	newBody, _ := ToggleTodo(note.Body, ti)
+	err = noteRepo.Edit(r.Context(), NoteID(id), newBody, strings.Join(note.Tags, ","))
+
+	if err != nil {
+		logger.Logger.Println(err.Error())
+		web.HandleUnexpectedError(w, err)
+		return
+	}
+
+	note, _ = noteRepo.Get(r.Context(), NoteID(id))
+
+	templates.RenderTemplate(w, "_note", note)
 }
 
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {
