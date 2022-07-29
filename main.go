@@ -14,7 +14,6 @@ import (
 	isoDate "github.com/thrgamon/nous/iso_date"
 	"github.com/thrgamon/nous/logger"
 	"github.com/thrgamon/nous/notes"
-	"github.com/thrgamon/nous/repo"
 	"github.com/thrgamon/nous/templates"
 	"github.com/thrgamon/nous/web"
 
@@ -82,7 +81,7 @@ func main() {
 }
 
 type PageData struct {
-	Notes       []repo.Note
+	Notes       []notes.Note
 	JsonNotes   string
 	PreviousDay string
 	NextDay     string
@@ -108,7 +107,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 	nextDay = t.NextDay()
 	previousDay := t.PreviousDay()
 
-	noteRepo := repo.NewNoteRepo()
+	noteRepo := notes.NewNoteRepo()
 	notes, err := noteRepo.GetAllSince(r.Context(), t.Time)
 
 	if err != nil {
@@ -127,7 +126,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ReviewHandler(w http.ResponseWriter, r *http.Request) {
-	notes, err := repo.NewNoteRepo().GetForReview(r.Context())
+	notes, err := notes.NewNoteRepo().GetForReview(r.Context())
 
 	if err != nil {
 		web.HandleUnexpectedError(w, err)
@@ -146,7 +145,7 @@ func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
-	noteRepo := repo.NewNoteRepo()
+	noteRepo := notes.NewNoteRepo()
 	notes, err := noteRepo.GetByTag(r.Context(), "to read")
 
 	if err != nil {
@@ -161,7 +160,7 @@ func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TodoHandler(w http.ResponseWriter, r *http.Request) {
-	noteRepo := repo.NewNoteRepo()
+	noteRepo := notes.NewNoteRepo()
 	notes, err := noteRepo.GetTodos(r.Context())
 
 	if err != nil {
@@ -179,7 +178,7 @@ func TagHandler(w http.ResponseWriter, r *http.Request) {
 
 	tag := r.FormValue("tag")
 
-	noteRepo := repo.NewNoteRepo()
+	noteRepo := notes.NewNoteRepo()
 	notes, err := noteRepo.GetByTag(r.Context(), tag)
 
 	if err != nil {
@@ -197,7 +196,7 @@ func LiveSearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.FormValue("query")
 
-	noteRepo := repo.NewNoteRepo()
+	noteRepo := notes.NewNoteRepo()
 	notes, err := noteRepo.Search(r.Context(), query)
 
 	if err != nil {
@@ -215,7 +214,7 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	query := r.FormValue("query")
 
-	noteRepo := repo.NewNoteRepo()
+	noteRepo := notes.NewNoteRepo()
 	notes, err := noteRepo.Search(r.Context(), query)
 
 	if err != nil {
