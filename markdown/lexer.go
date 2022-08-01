@@ -28,10 +28,12 @@ const (
 	itemHeader
 	itemText
 	itemNewLine
+	itemList
 )
 
 const header = "#"
 const eol = "\n"
+const list = "-"
 
 type item struct {
 	typ itemType
@@ -72,6 +74,12 @@ func lexNewLine(l *lexer) stateFn {
 
 func lexText(l *lexer) stateFn {
 	for {
+		if strings.HasPrefix(l.input[l.pos:], list) {
+			if l.pos > l.start {
+				l.emit(itemText)
+			}
+			return lexList
+		}
 		if strings.HasPrefix(l.input[l.pos:], eol) {
 			if l.pos > l.start {
 				l.emit(itemText)
@@ -104,6 +112,15 @@ func lexHeader(l *lexer) stateFn {
     l.next()
     l.ignore()
 }
+	return lexText
+}
+
+func lexList(l *lexer) stateFn {
+	if l.accept(list) && l.peek() == ws {
+    l.emit(itemList)
+    l.next()
+    l.ignore()
+  }
 	return lexText
 }
 

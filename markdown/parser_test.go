@@ -51,3 +51,26 @@ func TestParseHeader4(t *testing.T) {
 	assert.Equal(t, want, got)
 }
 
+
+func TestParseList(t *testing.T) {
+	buf := bytes.Buffer{}
+	text := "- list 1\n- list 2\n\n"
+  want := "<ul>\n<li>list 1</li>\n<li>list 2</li>\n</ul>\n"
+	_, itemChan := lex("markdown", text)
+  parse(itemChan, &buf)
+	got := buf.String()
+
+	assert.Equal(t, want, got)
+}
+
+func TestParseList1(t *testing.T) {
+	buf := bytes.Buffer{}
+	text := "- list 1\n- list 2"
+  want := "<ul>\n<li>list 1</li>\n<li>list 2</li>\n</ul>\n"
+	_, itemChan := lex("markdown", text)
+  parse(itemChan, &buf)
+	got := buf.String()
+
+	assert.Equal(t, want, got)
+}
+

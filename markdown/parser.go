@@ -14,12 +14,13 @@ type contextType int
 
 const (
   inText contextType = iota
-  inHeader
+  inList
 )
 
 type Tag interface {
   Open() string
   Close() string
+  Tag() string
 }
 
 type HeaderTag struct {
@@ -34,12 +35,45 @@ func (h *HeaderTag) Close() string{
  return fmt.Sprintf("</h%d>", h.level)
 }
 
+func (h *HeaderTag) Tag() string{
+ return "h"
+}
+
+type UnorderedListTag struct{}
+
+func (ul *UnorderedListTag) Open() string {
+ return fmt.Sprintf("<ul>")
+}
+
+func (ul *UnorderedListTag) Close() string{
+ return fmt.Sprintf("</ul>")
+}
+
+func (ul *UnorderedListTag) Tag() string{
+ return "ul"
+}
+
+type ListItemTag struct{}
+
+func (li *ListItemTag) Open() string {
+ return fmt.Sprintf("<li>")
+}
+
+func (li *ListItemTag) Close() string{
+ return fmt.Sprintf("</li>")
+}
+
+func (li *ListItemTag) Tag() string{
+ return "li"
+}
+
 func parse(items chan item, buf *bytes.Buffer) *bytes.Buffer {
 	p := &parser{
 		items:  items,
 		output: buf,
 	}
 
+  context := inText
   stack := NewStack()
 
   for item := range p.items {
@@ -50,22 +84,45 @@ func parse(items chan item, buf *bytes.Buffer) *bytes.Buffer {
       h := &HeaderTag{len(item.val)}
       stack.Push(h)
       fmt.Fprintf(p.output, h.Open())
+  case itemList: 
+      if context != inList {
+        ul := &UnorderedListTag{}
+        stack.Push(ul)
+        context = inList
+        fmt.Fprintf(p.output, ul.Open())
+		    fmt.Fprintf(p.output, "\n")
+      }
+      li := &ListItemTag{}
+      stack.Push(li)
+      fmt.Fprintf(p.output, li.Open())
   case itemNewLine: 
       if stack.Empty() {
 		    fmt.Fprintf(p.output, "\n")
       } else {
-      switch stack.Peek().(type) {
-      case *HeaderTag:
+      switch stack.Peek().Tag() {
+      case "h1":
 		    fmt.Fprintf(p.output, stack.Pop().Close())
+      case "li":
+		    fmt.Fprintf(p.output, stack.Pop().Close())
+		    fmt.Fprintf(p.output, "\n")
+      case "ul":
+		    fmt.Fprintf(p.output, stack.Pop().Close())
+		    fmt.Fprintf(p.output, "\n")
+        context = inText
       }
     }
   case itemEOF:
       if stack.Empty() {
         break
       }
-      switch stack.Peek().(type) {
-      case *HeaderTag:
+      switch stack.Peek().Tag() {
+      case "h":
 		    fmt.Fprintf(p.output, stack.Pop().Close())
+      case "li":
+		    fmt.Fprintf(p.output, stack.Pop().Close())
+		    fmt.Fprintf(p.output, "\n")
+		    fmt.Fprintf(p.output, stack.Pop().Close())
+		    fmt.Fprintf(p.output, "\n")
       }
   }
   }
@@ -91,7 +148,7 @@ func (s *Stack) Empty() bool{
 }
 
 func (s *Stack) Peek() Tag {
-  n := len(s.s) -1
+  n := len(s.s) - 1
   return s.s[n]
 }
 
