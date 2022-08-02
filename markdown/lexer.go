@@ -29,11 +29,13 @@ const (
 	itemText
 	itemNewLine
 	itemList
+	itemBold
 )
 
 const header = "#"
 const eol = "\n"
 const list = "-"
+const bold = "*"
 
 type item struct {
 	typ itemType
@@ -92,6 +94,12 @@ func lexText(l *lexer) stateFn {
 			}
 			return lexHeader
 		}
+		if strings.HasPrefix(l.input[l.pos:], bold) {
+			if l.pos > l.start {
+				l.emit(itemText)
+			}
+			return lexBold
+		}
 		if l.next() == eof {
 			break
 		}
@@ -107,20 +115,27 @@ func lexHeader(l *lexer) stateFn {
 	if l.accept(header) {
 		l.acceptRun(header)
 	}
-  if l.peek() == ws {
-    l.emit(itemHeader)
-    l.next()
-    l.ignore()
+	if l.peek() == ws {
+		l.emit(itemHeader)
+		l.next()
+		l.ignore()
+	}
+	return lexText
 }
+
+func lexBold(l *lexer) stateFn {
+	if l.accept(bold) {
+		l.emit(itemBold)
+	}
 	return lexText
 }
 
 func lexList(l *lexer) stateFn {
 	if l.accept(list) && l.peek() == ws {
-    l.emit(itemList)
-    l.next()
-    l.ignore()
-  }
+		l.emit(itemList)
+		l.next()
+		l.ignore()
+	}
 	return lexText
 }
 
@@ -140,7 +155,7 @@ func (l *lexer) ignore() {
 }
 
 func (l *lexer) skip() {
-  l.pos += 1
+	l.pos += 1
 }
 
 func (l *lexer) backup() {
