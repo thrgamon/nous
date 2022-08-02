@@ -52,6 +52,41 @@ func ReviewedHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 }
 
+type StatusPageData struct {
+  Statuses []StatusNotes
+}
+
+type StatusNotes struct {
+  Name string
+  Notes []Note
+}
+
+func StatusHandler(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	r.ParseForm()
+	tag := r.FormValue("tag")
+
+	noteRepo := NewNoteRepo()
+
+	if err := noteRepo.AddTag(r.Context(), NoteID(id), tag); err != nil {
+    panic(err)
+	}
+
+  pageData := StatusPageData{Statuses: []StatusNotes{}}
+
+  tags := []string{"Important & Urgent", "Not Important & Urgent", "Important & Not Urgent", "Not Important & Not Urgent"}
+  for _, tag := range tags {
+    notes, err := noteRepo.GetByTags(r.Context(), tag)
+    if err != nil {
+      panic(err)
+    }
+    statusNote := StatusNotes{Name: tag, Notes: notes}
+    pageData.Statuses = append(pageData.Statuses, statusNote)
+  }
+
+	templates.RenderTemplate(w, "_todos", pageData)
+}
+
 func EditHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 

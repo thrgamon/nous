@@ -4,6 +4,10 @@
   <div class="under-review">
   {{ template "note" . }}
   <button hx-patch="/note/{{.ID}}/review" hx-target="closest .under-review" hx-swap="delete">Reviewed</button>
+  <button hx-patch="/note/{{.ID}}/status" hx-target="closest .under-review" hx-swap="delete">Important & Urgent</button>
+  <button hx-patch="/note/{{.ID}}/status" hx-target="closest .under-review" hx-swap="delete">Not Important & Urgent</button>
+  <button hx-patch="/note/{{.ID}}/status" hx-target="closest .under-review" hx-swap="delete">Important & Not Urgent</button>
+  <button hx-patch="/note/{{.ID}}/status" hx-target="closest .under-review" hx-swap="delete">Not Urgent & Not Important</button>
   </div>
   {{end}}
   </div>

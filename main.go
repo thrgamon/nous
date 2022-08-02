@@ -64,6 +64,7 @@ func main() {
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/edit", notes.UpdateHandler).Methods("PUT")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/toggle", notes.ToggleHandler)
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/review", notes.ReviewedHandler).Methods("PATCH")
+	authedRouter.HandleFunc("/note/{id:[0-9]+}/status", notes.StatusHandler).Methods("PATCH")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/todo/{todoIndex:[0-9]+}", notes.ToggleTodoHandler).Methods("PUT")
 	authedRouter.HandleFunc("/todos", TodoHandler).Methods("GET")
 	authedRouter.HandleFunc("/api/readings", ApiReadingHandler).Methods("GET")
@@ -162,16 +163,19 @@ func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
 
 func TodoHandler(w http.ResponseWriter, r *http.Request) {
 	noteRepo := notes.NewNoteRepo()
-	notes, err := noteRepo.GetTodos(r.Context())
+  pageData := notes.StatusPageData{Statuses: []notes.StatusNotes{}}
 
-	if err != nil {
-		web.HandleUnexpectedError(w, err)
-		return
-	}
+  tags := []string{"todo", "Important & Urgent", "Not Important & Urgent", "Important & Not Urgent", "Not Important & Not Urgent"}
+  for _, tag := range tags {
+    taggedNotes, err := noteRepo.GetByTags(r.Context(), tag)
+    if err != nil {
+      panic(err)
+    }
+    statusNote := notes.StatusNotes{Name: tag, Notes: taggedNotes}
+    pageData.Statuses = append(pageData.Statuses, statusNote)
+  }
 
-	pageData := PageData{Notes: notes}
-
-	templates.RenderTemplate(w, "notes", pageData)
+	templates.RenderTemplate(w, "todos", pageData)
 }
 
 func TagHandler(w http.ResponseWriter, r *http.Request) {

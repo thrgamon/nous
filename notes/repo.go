@@ -276,6 +276,12 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 
 	return error
 }
+
+func (rr NoteRepo) AddTag(ctx context.Context, noteId NoteID, tag string) error {
+	_, err := rr.db.Exec(ctx, "INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, tag)
+	return err
+}
+
 func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags string) error {
 	error := rr.withTransaction(ctx, func() error {
 		_, err := rr.db.Exec(ctx, "UPDATE notes SET body=$1 WHERE notes.id = $2", body, noteId)
