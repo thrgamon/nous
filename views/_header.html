@@ -38,7 +38,7 @@
   </div>
     <nav>
       <a href="/todos">Todos</a>
-      <a href="/tag?tag=to read">Readings</a>
+      <a href="/tag?tags=to read">Readings</a>
       <a href="/review">Review</a>
     </nav>
   </header>
@@ -66,7 +66,7 @@
     <ul class="tags text-subdued">
       {{ range .Tags}} 
       <li class="tag">
-        <a href="/tag?tag={{.}}">{{.}}</a>
+        <a href="/tag?tags={{.}}">{{.}}</a>
       </li>
       {{end}}
     </ul>

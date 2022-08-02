@@ -147,7 +147,7 @@ func HealthcheckHandler(w http.ResponseWriter, r *http.Request) {
 
 func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
 	noteRepo := notes.NewNoteRepo()
-	notes, err := noteRepo.GetByTag(r.Context(), "to read")
+	notes, err := noteRepo.GetByTags(r.Context(), "to read")
 
 	if err != nil {
 		logger.Logger.Println(err.Error())
@@ -177,14 +177,14 @@ func TodoHandler(w http.ResponseWriter, r *http.Request) {
 func TagHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
-	tag := r.FormValue("tag")
+	tags := r.FormValue("tags")
 
 	noteRepo := notes.NewNoteRepo()
-	notes, err := noteRepo.GetByTag(r.Context(), tag)
+	notes, err := noteRepo.GetByTags(r.Context(), tags)
 
 	if err != nil {
 		web.HandleUnexpectedError(w, err)
-		return
+		panic(err)
 	}
 
 	pageData := PageData{Notes: notes}

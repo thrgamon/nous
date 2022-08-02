@@ -79,7 +79,7 @@ func (rr NoteRepo) GetAllSince(ctx context.Context, t time.Time) ([]Note, error)
 	return rr.GetAllBetween(ctx, startOfDay(t), endOfDay(t))
 }
 
-func (rr NoteRepo) GetByTag(ctx context.Context, tag string) ([]Note, error) {
+func (rr NoteRepo) GetByTags(ctx context.Context, tags string) ([]Note, error) {
 	var notes []Note
 	rows, err := rr.db.Query(
 		ctx,
@@ -92,10 +92,10 @@ func (rr NoteRepo) GetByTag(ctx context.Context, tag string) ([]Note, error) {
     FROM
       note_search
   	WHERE
-  		$1 = ANY(tags) AND done=false
+    string_to_array($1, ',') <@ tags::text[] AND done=false
     ORDER BY
       note_search.id DESC`,
-		tag,
+		tags,
 	)
 
 	defer rows.Close()
