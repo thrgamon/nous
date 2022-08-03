@@ -74,7 +74,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 
   pageData := StatusPageData{Statuses: []StatusNotes{}}
 
-  tags := []string{"Important & Urgent", "Not Important & Urgent", "Important & Not Urgent", "Not Important & Not Urgent"}
+  tags := []string{"todo,work", "Important & Urgent", "Not Important & Urgent", "Important & Not Urgent", "Not Important & Not Urgent"}
   for _, tag := range tags {
     notes, err := noteRepo.GetByTags(r.Context(), tag)
     if err != nil {

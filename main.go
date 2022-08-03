@@ -165,7 +165,7 @@ func TodoHandler(w http.ResponseWriter, r *http.Request) {
 	noteRepo := notes.NewNoteRepo()
   pageData := notes.StatusPageData{Statuses: []notes.StatusNotes{}}
 
-  tags := []string{"todo", "Important & Urgent", "Not Important & Urgent", "Important & Not Urgent", "Not Important & Not Urgent"}
+  tags := []string{"todo,work", "Important & Urgent", "Not Important & Urgent", "Important & Not Urgent", "Not Important & Not Urgent"}
   for _, tag := range tags {
     taggedNotes, err := noteRepo.GetByTags(r.Context(), tag)
     if err != nil {
