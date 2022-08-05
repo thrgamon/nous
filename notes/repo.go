@@ -166,20 +166,17 @@ func (rr NoteRepo) GetForReview(ctx context.Context) ([]Note, error) {
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      notes.id,
+      note_search.id,
       body,
-      array_agg(DISTINCT COALESCE(tags.tag, '')) AS tags,
+      tags,
       done,
-      notes.inserted_at
+      note_search.inserted_at
     FROM
-      notes
-      JOIN tags on tags.note_id = notes.id
+      note_search
     WHERE
       reviewed_at IS NULL
-    GROUP BY
-      notes.id
     ORDER BY
-      notes.id DESC`,
+      note_search.id DESC`,
 	)
 	defer rows.Close()
 
@@ -257,15 +254,16 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 		combinedTags := assembleTags(body, tags)
 
 		if len(combinedTags) > 0 {
-			batch := &pgx.Batch{}
-
 			for _, string := range combinedTags {
+        var tagId int
 				fmtString := strings.TrimSpace(strings.ToLower(string))
-				batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
-			}
 
-			br := rr.db.SendBatch(ctx, batch)
-			err = br.Close()
+        err := rr.db.QueryRow(ctx, "INSERT INTO tags (tag) VALUES ($1) ON CONFLICT (tag) DO UPDATE SET updated_at = NOW() RETURNING id", fmtString).Scan(&tagId)
+        if err != nil {return err}
+
+        _, err = rr.db.Exec(ctx, "INSERT INTO notetags (tag_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", tagId, noteId)
+        if err != nil {return err}
+			}
 
 			return err
 		}
@@ -291,7 +289,7 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 			return err
 		}
 
-		_, err = rr.db.Exec(ctx, "DELETE FROM tags WHERE note_id = $1", noteId)
+		_, err = rr.db.Exec(ctx, "DELETE FROM notetags WHERE note_id = $1", noteId)
 
 		if err != nil {
 			rr.logger.Println(err.Error())
@@ -301,15 +299,14 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 		combinedTags := assembleTags(body, tags)
 
 		if len(combinedTags) > 0 {
-			batch := &pgx.Batch{}
-
 			for _, string := range combinedTags {
+        var tagId int
 				fmtString := strings.TrimSpace(strings.ToLower(string))
-				batch.Queue("INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, fmtString)
+        err := rr.db.QueryRow(ctx, "INSERT INTO tags (tag) VALUES ($1)", fmtString).Scan(&tagId)
+        if err != nil {return err}
+        _, err = rr.db.Exec(ctx, "INSERT INTO notetags (tag_id, note_id) VALUES ($1, $2)", tagId, noteId)
+        if err != nil {return err}
 			}
-
-			br := rr.db.SendBatch(ctx, batch)
-			err = br.Close()
 
 			return err
 		}
