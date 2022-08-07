@@ -165,13 +165,24 @@ func TodoHandler(w http.ResponseWriter, r *http.Request) {
 	noteRepo := notes.NewNoteRepo()
   pageData := notes.StatusPageData{Statuses: []notes.StatusNotes{}}
 
-  tags := []string{"todo,work", "Important & Urgent", "Not Important & Urgent", "Important & Not Urgent", "Not Important & Not Urgent"}
-  for _, tag := range tags {
-    taggedNotes, err := noteRepo.GetByTags(r.Context(), tag)
-    if err != nil {
-      panic(err)
+  nts, err := noteRepo.GetByPriority(r.Context())
+  if err != nil { panic(err) }
+
+  m := make(map[notes.PriorityLevel][]notes.Note)
+
+  for _, note := range nts {
+    arr, ok := m[note.Priority]
+    if ok {
+      arr = append(arr, note)
+    } else {
+      arr = []notes.Note{note}
     }
-    statusNote := notes.StatusNotes{Name: tag, Notes: taggedNotes}
+    m[note.Priority] = arr
+  }
+
+  statuses := []notes.PriorityLevel{notes.Unprioritised, notes.ImportantAndUrgent, notes.Important, notes.Urgent, notes.Someday}
+  for _, status := range statuses {
+    statusNote := notes.StatusNotes{Name: string(status), Notes: m[status]}
     pageData.Statuses = append(pageData.Statuses, statusNote)
   }
 

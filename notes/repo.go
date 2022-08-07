@@ -27,6 +27,7 @@ type Note struct {
 	Body string   `json:"body"`
 	Tags []string `json:"tags"`
 	Done bool     `json:"done"`
+	Priority PriorityLevel  `json:"priority"`
 
 	DisplayBody template.HTML
 	DisplayTags string
@@ -35,6 +36,37 @@ type Note struct {
 type NoteRepo struct {
 	db     *pgxpool.Pool
 	logger *log.Logger
+}
+
+type TagType int
+
+const (
+  Category TagType = iota+1
+  TaskPriority
+)
+
+type PriorityLevel string
+
+const (
+  ImportantAndUrgent PriorityLevel = "Important & Urgent"
+  Important PriorityLevel = "Important"
+  Urgent PriorityLevel = "Urgent"
+  Someday PriorityLevel = "Someday"
+  Unprioritised PriorityLevel = "Unprioritised"
+)
+
+func GetPriorityLevel(level int) PriorityLevel {
+  switch level {
+  case 1:
+    return ImportantAndUrgent
+  case 2:
+    return Important
+  case 3:
+    return Urgent
+  case 4:
+    return Someday
+}
+ panic("Invalid priority level given")
 }
 
 func NewNoteRepo() *NoteRepo {
@@ -51,7 +83,8 @@ func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
       body,
       tags,
       done,
-      inserted_at
+      inserted_at,
+      'Unprioritised'
     FROM
       note_search
     WHERE
@@ -79,6 +112,49 @@ func (rr NoteRepo) GetAllSince(ctx context.Context, t time.Time) ([]Note, error)
 	return rr.GetAllBetween(ctx, startOfDay(t), endOfDay(t))
 }
 
+// TODO: Actually parse the data
+func (rr NoteRepo) GetByPriority(ctx context.Context) ([]Note, error) {
+	var notes []Note
+	rows, err := rr.db.Query(
+		ctx,
+		`WITH priority_tags AS (
+	SELECT
+		tag AS tags
+	FROM
+		tags
+	WHERE
+		TYPE = $1
+)
+SELECT
+	note_search.id,
+  body, 
+  tags, 
+  done,
+  inserted_at,
+  (
+		SELECT
+			COALESCE((
+				SELECT
+					* FROM priority_tags
+				INTERSECT
+				SELECT
+					unnest(note_search.tags)), 'Unprioritised'))
+	FROM
+		note_search
+	WHERE
+		ARRAY ['todo', 'work'] <@ tags::text[] AND done=false`,
+		TaskPriority,
+	)
+
+	defer rows.Close()
+
+	if err != nil {
+		return notes, err
+	}
+
+	return rr.parseData(rows)
+}
+
 func (rr NoteRepo) GetByTags(ctx context.Context, tags string) ([]Note, error) {
 	var notes []Note
 	rows, err := rr.db.Query(
@@ -88,7 +164,8 @@ func (rr NoteRepo) GetByTags(ctx context.Context, tags string) ([]Note, error) {
       body,
       tags,
       done,
-      inserted_at
+      inserted_at,
+      'Unprioritised'
     FROM
       note_search
   	WHERE
@@ -128,7 +205,8 @@ func (rr NoteRepo) parseData(rows pgx.Rows) ([]Note, error) {
 		var tags []string
 		var done bool
 		var insertedAt time.Time
-		err := rows.Scan(&id, &body, &tags, &done, &insertedAt)
+		var priorityLevel string
+		err := rows.Scan(&id, &body, &tags, &done, &insertedAt, &priorityLevel)
 
 		if err != nil {
 			rr.logger.Println(err.Error())
@@ -146,6 +224,7 @@ func (rr NoteRepo) parseData(rows pgx.Rows) ([]Note, error) {
 				Body: body,
 				Tags: tags,
 				Done: done,
+				Priority: PriorityLevel(priorityLevel),
 
 				DisplayBody: template.HTML(buf.String()),
 				DisplayTags: strings.Join(tags, ", "),
@@ -170,7 +249,8 @@ func (rr NoteRepo) GetForReview(ctx context.Context) ([]Note, error) {
       body,
       tags,
       done,
-      note_search.inserted_at
+      note_search.inserted_at,
+      'Unprioritised'
     FROM
       note_search
     WHERE
@@ -196,7 +276,8 @@ func (rr NoteRepo) GetAllBetween(ctx context.Context, from time.Time, to time.Ti
       body,
       tags,
       done,
-      inserted_at
+      inserted_at,
+      'Unprioritised'
     FROM
       note_search
     WHERE
@@ -275,8 +356,14 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 	return error
 }
 
-func (rr NoteRepo) AddTag(ctx context.Context, noteId NoteID, tag string) error {
-	_, err := rr.db.Exec(ctx, "INSERT INTO tags (note_id, tag) VALUES ($1, $2)", noteId, tag)
+// TODO: Wrap in transaction
+func (rr NoteRepo) SetPriority(ctx context.Context, noteId NoteID, priorityLevel PriorityLevel) error {
+	_, err := rr.db.Exec(ctx, "delete from notetags where note_id = $1 and tag_id in (select id as tag_id from tags where tags.type = $2)", noteId, TaskPriority)
+  if err != nil {panic(err)}
+
+	_, err = rr.db.Exec(ctx, "INSERT INTO notetags (note_id, tag_id) VALUES ($1, (select id from tags where tag=$2))", noteId, priorityLevel)
+  if err != nil {panic(err)}
+
 	return err
 }
 
@@ -341,7 +428,8 @@ func (rr NoteRepo) GetTodos(ctx context.Context) ([]Note, error) {
       body,
       tags,
       done,
-      inserted_at
+      inserted_at,
+      'Unprioritised'
     FROM
       note_search
   	WHERE
@@ -373,7 +461,8 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
 	body,
 	tags,
 	done,
-	inserted_at
+	inserted_at,
+  'Unprioritised'
 FROM (
 	SELECT
 		note_search.id AS id,
