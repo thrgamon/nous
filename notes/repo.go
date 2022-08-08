@@ -389,9 +389,11 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 			for _, string := range combinedTags {
         var tagId int
 				fmtString := strings.TrimSpace(strings.ToLower(string))
-        err := rr.db.QueryRow(ctx, "INSERT INTO tags (tag) VALUES ($1)", fmtString).Scan(&tagId)
+
+        err := rr.db.QueryRow(ctx, "INSERT INTO tags (tag) VALUES ($1) ON CONFLICT (tag) DO UPDATE SET updated_at = NOW() RETURNING id", fmtString).Scan(&tagId)
         if err != nil {return err}
-        _, err = rr.db.Exec(ctx, "INSERT INTO notetags (tag_id, note_id) VALUES ($1, $2)", tagId, noteId)
+
+        _, err = rr.db.Exec(ctx, "INSERT INTO notetags (tag_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", tagId, noteId)
         if err != nil {return err}
 			}
 
