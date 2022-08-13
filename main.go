@@ -14,6 +14,7 @@ import (
 	isoDate "github.com/thrgamon/nous/iso_date"
 	"github.com/thrgamon/nous/logger"
 	"github.com/thrgamon/nous/notes"
+	"github.com/thrgamon/nous/contexts"
 	"github.com/thrgamon/nous/templates"
 	"github.com/thrgamon/nous/web"
 
@@ -57,6 +58,9 @@ func main() {
 	authedRouter.HandleFunc("/live_search", LiveSearchHandler)
 	authedRouter.HandleFunc("/tag", TagHandler)
 
+	authedRouter.HandleFunc("/active-context", GetActiveContextHandler).Methods("GET")
+	authedRouter.HandleFunc("/switch-context", GetContextHandler).Methods("GET")
+	authedRouter.HandleFunc("/switch-context/{context:[a-z]+}", UpdateContextHandler).Methods("PUT")
 	authedRouter.HandleFunc("/note", notes.CreateHandler).Methods("POST")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}", notes.ViewNoteHandler).Methods("GET")
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/delete", notes.DeleteHandler)
@@ -88,6 +92,7 @@ type PageData struct {
 	PreviousDay string
 	NextDay     string
 	CurrentDay  string
+  Context string
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -117,11 +122,14 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	context := contexts.NewContextRepo().GetActiveContext(r.Context())
+
 	pageData := PageData{
 		Notes:       notes,
 		PreviousDay: previousDay.Stringify(),
 		NextDay:     nextDay.Stringify(),
 		CurrentDay:  t.Stringify(),
+    Context: context,
 	}
 
 	templates.RenderTemplate(w, "home", pageData)
@@ -163,28 +171,30 @@ func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
 
 func TodoHandler(w http.ResponseWriter, r *http.Request) {
 	noteRepo := notes.NewNoteRepo()
-  pageData := notes.StatusPageData{Statuses: []notes.StatusNotes{}}
+	pageData := notes.StatusPageData{Statuses: []notes.StatusNotes{}}
 
-  nts, err := noteRepo.GetByPriority(r.Context())
-  if err != nil { panic(err) }
+	nts, err := noteRepo.GetByPriority(r.Context())
+	if err != nil {
+		panic(err)
+	}
 
-  m := make(map[notes.PriorityLevel][]notes.Note)
+	m := make(map[notes.PriorityLevel][]notes.Note)
 
-  for _, note := range nts {
-    arr, ok := m[note.Priority]
-    if ok {
-      arr = append(arr, note)
-    } else {
-      arr = []notes.Note{note}
-    }
-    m[note.Priority] = arr
-  }
+	for _, note := range nts {
+		arr, ok := m[note.Priority]
+		if ok {
+			arr = append(arr, note)
+		} else {
+			arr = []notes.Note{note}
+		}
+		m[note.Priority] = arr
+	}
 
-  statuses := []notes.PriorityLevel{notes.Unprioritised, notes.ImportantAndUrgent, notes.Important, notes.Urgent, notes.Someday}
-  for _, status := range statuses {
-    statusNote := notes.StatusNotes{Name: string(status), Notes: m[status]}
-    pageData.Statuses = append(pageData.Statuses, statusNote)
-  }
+	statuses := []notes.PriorityLevel{notes.Unprioritised, notes.ImportantAndUrgent, notes.Important, notes.Urgent, notes.Someday}
+	for _, status := range statuses {
+		statusNote := notes.StatusNotes{Name: string(status), Notes: m[status]}
+		pageData.Statuses = append(pageData.Statuses, statusNote)
+	}
 
 	templates.RenderTemplate(w, "todos", pageData)
 }
@@ -241,4 +251,27 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 	pageData := PageData{Notes: notes}
 
 	templates.RenderTemplate(w, "search", pageData)
+}
+
+func GetContextHandler(w http.ResponseWriter, r *http.Request) {
+	contextRepo := contexts.NewContextRepo()
+	contexts := contextRepo.GetContexts(r.Context())
+
+	templates.RenderTemplate(w, "_switch-context", contexts)
+}
+
+func GetActiveContextHandler(w http.ResponseWriter, r *http.Request) {
+	contextRepo := contexts.NewContextRepo()
+	activeContext := contextRepo.GetActiveContext(r.Context())
+
+	templates.RenderTemplate(w, "_active-context", activeContext)
+}
+
+func UpdateContextHandler(w http.ResponseWriter, r *http.Request) {
+	context := mux.Vars(r)["context"]
+
+	contextRepo := contexts.NewContextRepo()
+	contextRepo.UpdateContext(r.Context(), context)
+
+  w.Header().Set("HX-Refresh", "true")
 }

@@ -23,11 +23,11 @@ import (
 type NoteID string
 
 type Note struct {
-	ID   NoteID   `json:"id"`
-	Body string   `json:"body"`
-	Tags []string `json:"tags"`
-	Done bool     `json:"done"`
-	Priority PriorityLevel  `json:"priority"`
+	ID       NoteID        `json:"id"`
+	Body     string        `json:"body"`
+	Tags     []string      `json:"tags"`
+	Done     bool          `json:"done"`
+	Priority PriorityLevel `json:"priority"`
 
 	DisplayBody template.HTML
 	DisplayTags string
@@ -41,32 +41,32 @@ type NoteRepo struct {
 type TagType int
 
 const (
-  Category TagType = iota+1
-  TaskPriority
+	Category TagType = iota + 1
+	TaskPriority
 )
 
 type PriorityLevel string
 
 const (
-  ImportantAndUrgent PriorityLevel = "Important & Urgent"
-  Important PriorityLevel = "Important"
-  Urgent PriorityLevel = "Urgent"
-  Someday PriorityLevel = "Someday"
-  Unprioritised PriorityLevel = "Unprioritised"
+	ImportantAndUrgent PriorityLevel = "Important & Urgent"
+	Important          PriorityLevel = "Important"
+	Urgent             PriorityLevel = "Urgent"
+	Someday            PriorityLevel = "Someday"
+	Unprioritised      PriorityLevel = "Unprioritised"
 )
 
 func GetPriorityLevel(level int) PriorityLevel {
-  switch level {
-  case 1:
-    return ImportantAndUrgent
-  case 2:
-    return Important
-  case 3:
-    return Urgent
-  case 4:
-    return Someday
-}
- panic("Invalid priority level given")
+	switch level {
+	case 1:
+		return ImportantAndUrgent
+	case 2:
+		return Important
+	case 3:
+		return Urgent
+	case 4:
+		return Someday
+	}
+	panic("Invalid priority level given")
 }
 
 func NewNoteRepo() *NoteRepo {
@@ -142,7 +142,7 @@ SELECT
 	FROM
 		note_search
 	WHERE
-		ARRAY ['todo', 'work'] <@ tags::text[] AND done=false`,
+  ARRAY ['todo', (select context from contexts where active = true)::text] <@ tags::text[] AND done=false`,
 		TaskPriority,
 	)
 
@@ -220,10 +220,10 @@ func (rr NoteRepo) parseData(rows pgx.Rows) ([]Note, error) {
 		notes = append(
 			notes,
 			Note{
-				ID:   NoteID(fmt.Sprint(id)),
-				Body: body,
-				Tags: tags,
-				Done: done,
+				ID:       NoteID(fmt.Sprint(id)),
+				Body:     body,
+				Tags:     tags,
+				Done:     done,
 				Priority: PriorityLevel(priorityLevel),
 
 				DisplayBody: template.HTML(buf.String()),
@@ -336,14 +336,18 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 
 		if len(combinedTags) > 0 {
 			for _, string := range combinedTags {
-        var tagId int
+				var tagId int
 				fmtString := strings.TrimSpace(strings.ToLower(string))
 
-        err := rr.db.QueryRow(ctx, "INSERT INTO tags (tag) VALUES ($1) ON CONFLICT (tag) DO UPDATE SET updated_at = NOW() RETURNING id", fmtString).Scan(&tagId)
-        if err != nil {return err}
+				err := rr.db.QueryRow(ctx, "INSERT INTO tags (tag) VALUES ($1) ON CONFLICT (tag) DO UPDATE SET updated_at = NOW() RETURNING id", fmtString).Scan(&tagId)
+				if err != nil {
+					return err
+				}
 
-        _, err = rr.db.Exec(ctx, "INSERT INTO notetags (tag_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", tagId, noteId)
-        if err != nil {return err}
+				_, err = rr.db.Exec(ctx, "INSERT INTO notetags (tag_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", tagId, noteId)
+				if err != nil {
+					return err
+				}
 			}
 
 			return err
@@ -359,10 +363,14 @@ func (rr NoteRepo) Add(ctx context.Context, body string, tags string) error {
 // TODO: Wrap in transaction
 func (rr NoteRepo) SetPriority(ctx context.Context, noteId NoteID, priorityLevel PriorityLevel) error {
 	_, err := rr.db.Exec(ctx, "delete from notetags where note_id = $1 and tag_id in (select id as tag_id from tags where tags.type = $2)", noteId, TaskPriority)
-  if err != nil {panic(err)}
+	if err != nil {
+		panic(err)
+	}
 
 	_, err = rr.db.Exec(ctx, "INSERT INTO notetags (note_id, tag_id) VALUES ($1, (select id from tags where tag=$2))", noteId, priorityLevel)
-  if err != nil {panic(err)}
+	if err != nil {
+		panic(err)
+	}
 
 	return err
 }
@@ -387,14 +395,18 @@ func (rr NoteRepo) Edit(ctx context.Context, noteId NoteID, body string, tags st
 
 		if len(combinedTags) > 0 {
 			for _, string := range combinedTags {
-        var tagId int
+				var tagId int
 				fmtString := strings.TrimSpace(strings.ToLower(string))
 
-        err := rr.db.QueryRow(ctx, "INSERT INTO tags (tag) VALUES ($1) ON CONFLICT (tag) DO UPDATE SET updated_at = NOW() RETURNING id", fmtString).Scan(&tagId)
-        if err != nil {return err}
+				err := rr.db.QueryRow(ctx, "INSERT INTO tags (tag) VALUES ($1) ON CONFLICT (tag) DO UPDATE SET updated_at = NOW() RETURNING id", fmtString).Scan(&tagId)
+				if err != nil {
+					return err
+				}
 
-        _, err = rr.db.Exec(ctx, "INSERT INTO notetags (tag_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", tagId, noteId)
-        if err != nil {return err}
+				_, err = rr.db.Exec(ctx, "INSERT INTO notetags (tag_id, note_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", tagId, noteId)
+				if err != nil {
+					return err
+				}
 			}
 
 			return err

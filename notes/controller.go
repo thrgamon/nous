@@ -53,48 +53,52 @@ func ReviewedHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type StatusPageData struct {
-  Statuses []StatusNotes
+	Statuses []StatusNotes
 }
 
 type StatusNotes struct {
-  Name string
-  Notes []Note
+	Name  string
+	Notes []Note
 }
 
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	r.ParseForm()
 	priorityLevel, err := strconv.Atoi(r.FormValue("priority"))
-  if err != nil {panic(err)}
+	if err != nil {
+		panic(err)
+	}
 
 	noteRepo := NewNoteRepo()
 
 	if err := noteRepo.SetPriority(r.Context(), NoteID(id), GetPriorityLevel(priorityLevel)); err != nil {
-    panic(err)
+		panic(err)
 	}
 
-  pageData := StatusPageData{Statuses: []StatusNotes{}}
+	pageData := StatusPageData{Statuses: []StatusNotes{}}
 
-  notes, err := noteRepo.GetByPriority(r.Context())
-  if err != nil { panic(err) }
+	notes, err := noteRepo.GetByPriority(r.Context())
+	if err != nil {
+		panic(err)
+	}
 
-  m := make(map[PriorityLevel][]Note)
+	m := make(map[PriorityLevel][]Note)
 
-  for _, note := range notes {
-    arr, ok := m[note.Priority]
-    if ok {
-      arr = append(arr, note)
-    } else {
-      arr = []Note{note}
-    }
-    m[note.Priority] = arr
-  }
+	for _, note := range notes {
+		arr, ok := m[note.Priority]
+		if ok {
+			arr = append(arr, note)
+		} else {
+			arr = []Note{note}
+		}
+		m[note.Priority] = arr
+	}
 
-  statuses := []PriorityLevel{Unprioritised, ImportantAndUrgent, Important, Urgent, Someday}
-  for _, status := range statuses {
-    statusNote := StatusNotes{Name: string(status), Notes: m[status]}
-    pageData.Statuses = append(pageData.Statuses, statusNote)
-  }
+	statuses := []PriorityLevel{Unprioritised, ImportantAndUrgent, Important, Urgent, Someday}
+	for _, status := range statuses {
+		statusNote := StatusNotes{Name: string(status), Notes: m[status]}
+		pageData.Statuses = append(pageData.Statuses, statusNote)
+	}
 
 	templates.RenderTemplate(w, "_todos", pageData)
 }

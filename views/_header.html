@@ -30,7 +30,7 @@
 <body>
   <header>
     <div class='top-row'>
-    <h1><a href="/">Nous</a></h1>
+      <h1><a href="/">Nous</a> <sup hx-trigger="load" hx-get="/active-context" hx-swap="innerHTML"></sup></h1>
       <form class='search-form' action="/search" method="get">
         <input type="text" name="query" required placeholder="search">
         <input type="submit" value="Search">
@@ -40,6 +40,7 @@
       <a href="/todos">Todos</a>
       <a href="/tag?tags=to read">Readings</a>
       <a href="/review">Review</a>
+      <a hx-get="/switch-context" hx-target="this" hx-swap="outerHTML">Switch Context</a>
     </nav>
   </header>
 {{ end }}
