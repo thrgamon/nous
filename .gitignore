@@ -22,3 +22,4 @@ public/build/
 .private
 .private.pub
 procfile
+*.sql
