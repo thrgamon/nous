@@ -1,13 +1,1 @@
-  <div class="grid-note">
-  {{ range .Statuses }}
-  <h2>{{.Name}}</h2>
-    {{ range .Notes }}
-      {{ template "note" . }}
-      <button hx-patch="/note/{{.ID}}/status?priority=1" hx-target=".grid-note" hx-swap="outerHTML">Important & Urgent</button>
-      <button hx-patch="/note/{{.ID}}/status?priority=2" hx-target=".grid-note" hx-swap="outerHTML">Important</button>
-      <button hx-patch="/note/{{.ID}}/status?priority=3" hx-target=".grid-note" hx-swap="outerHTML">Urgent</button>
-      <button hx-patch="/note/{{.ID}}/status?priority=4" hx-target=".grid-note" hx-swap="outerHTML">Someday</button>
-      {{end}}
-  {{end}}
-  </div>
-
+{{ template "todos" . }}

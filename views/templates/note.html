@@ -1,0 +1,30 @@
+{{ define "note" }}
+<div class="note {{if .Done}} done {{end}}" data-note-id="{{.ID}}">
+  <a name={{.ID}}></a>
+  <div class="controls">
+    <input
+      name="done"
+      type="checkbox"
+      {{if .Done}}checked{{end}}
+      hx-post="/note/{{.ID}}/toggle"
+      hx-target="closest .note"
+      hx-swap="outerHTML"
+    />
+    <div class="emoji-button" hx-get="/note/{{.ID}}/edit" hx-target="closest .note" hx-swap="outerHTML">&#128397;</div>
+    <div class="emoji-button" hx-get="/note/{{.ID}}/delete" hx-target="closest .note" hx-swap="delete">&#x1F5D1;</div>
+  </div>
+  <div class="content">
+    {{.DisplayBody}}
+  </div>
+  <div class="metadata">
+    <ul class="tags text-subdued">
+      {{ range .Tags}} 
+      <li class="tag">
+        <a href="/tag?tags={{.}}">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  <hr>
+</div>
+{{end}}
