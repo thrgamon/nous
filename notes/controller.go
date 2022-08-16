@@ -54,6 +54,7 @@ func ReviewedHandler(w http.ResponseWriter, r *http.Request) {
 
 type StatusPageData struct {
 	Statuses []StatusNotes
+	Context  string
 }
 
 type StatusNotes struct {

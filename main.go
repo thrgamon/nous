@@ -9,12 +9,12 @@ import (
 	"github.com/thrgamon/go-utils/env"
 	urepo "github.com/thrgamon/go-utils/repo/user"
 	"github.com/thrgamon/go-utils/web/authentication"
+	"github.com/thrgamon/nous/contexts"
 	"github.com/thrgamon/nous/database"
 	"github.com/thrgamon/nous/environment"
 	isoDate "github.com/thrgamon/nous/iso_date"
 	"github.com/thrgamon/nous/logger"
 	"github.com/thrgamon/nous/notes"
-	"github.com/thrgamon/nous/contexts"
 	"github.com/thrgamon/nous/templates"
 	"github.com/thrgamon/nous/web"
 
@@ -92,7 +92,7 @@ type PageData struct {
 	PreviousDay string
 	NextDay     string
 	CurrentDay  string
-  Context string
+	Context     string
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -129,7 +129,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		PreviousDay: previousDay.Stringify(),
 		NextDay:     nextDay.Stringify(),
 		CurrentDay:  t.Stringify(),
-    Context: context,
+		Context:     context,
 	}
 
 	templates.RenderTemplate(w, "home", pageData)
@@ -170,8 +170,9 @@ func ApiReadingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TodoHandler(w http.ResponseWriter, r *http.Request) {
+	context := contexts.NewContextRepo().GetActiveContext(r.Context())
 	noteRepo := notes.NewNoteRepo()
-	pageData := notes.StatusPageData{Statuses: []notes.StatusNotes{}}
+	pageData := notes.StatusPageData{Statuses: []notes.StatusNotes{}, Context: context + ", todo"}
 
 	nts, err := noteRepo.GetByPriority(r.Context())
 	if err != nil {
@@ -273,5 +274,5 @@ func UpdateContextHandler(w http.ResponseWriter, r *http.Request) {
 	contextRepo := contexts.NewContextRepo()
 	contextRepo.UpdateContext(r.Context(), context)
 
-  w.Header().Set("HX-Refresh", "true")
+	w.Header().Set("HX-Refresh", "true")
 }

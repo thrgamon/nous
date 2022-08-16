@@ -26,7 +26,9 @@ func (rr ContextRepo) GetContexts(ctx context.Context) []string {
 
 	defer rows.Close()
 
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
 	return rr.parseData(rows)
 }
@@ -34,17 +36,23 @@ func (rr ContextRepo) GetContexts(ctx context.Context) []string {
 func (rr ContextRepo) GetActiveContext(ctx context.Context) (context string) {
 	err := rr.db.QueryRow(ctx, `SELECT context from contexts where active = true`).Scan(&context)
 
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 
-  return context
+	return context
 }
 
 func (rr ContextRepo) UpdateContext(ctx context.Context, context string) {
-	_, err := rr.db.Exec( ctx, `update contexts set active = false where active = true;`)
-	if err != nil { panic(err) }
+	_, err := rr.db.Exec(ctx, `update contexts set active = false where active = true;`)
+	if err != nil {
+		panic(err)
+	}
 
-	_, err = rr.db.Exec( ctx, `update contexts set active = true where context = $1;`, context)
-	if err != nil { panic(err) }
+	_, err = rr.db.Exec(ctx, `update contexts set active = true where context = $1;`, context)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (rr ContextRepo) parseData(rows pgx.Rows) []string {
@@ -54,7 +62,9 @@ func (rr ContextRepo) parseData(rows pgx.Rows) []string {
 		var context string
 		err := rows.Scan(&context)
 
-		if err != nil { panic(err) }
+		if err != nil {
+			panic(err)
+		}
 
 		contexts = append(contexts, context)
 	}

@@ -36,8 +36,8 @@ func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
 			return
 		}
 	} else {
-    templates := []string{fmt.Sprintf("views/%s.html", tmpl)}
-    templates = append(templates, getTemplates()...)
+		templates := []string{fmt.Sprintf("views/%s.html", tmpl)}
+		templates = append(templates, getTemplates()...)
 		template := template.Must(template.ParseFiles(templates...))
 		err := template.Execute(w, data)
 
@@ -61,8 +61,8 @@ func cacheTemplates() map[string]*template.Template {
 
 			if path != "_header.html" && path != "_footer.html" && re.MatchString(path) {
 				normalisedPath := strings.TrimSuffix(strings.TrimPrefix(path, "views/"), ".html")
-        tmplWithTemplates := []string{path}
-        tmplWithTemplates = append(tmplWithTemplates, getTemplates()...)
+				tmplWithTemplates := []string{path}
+				tmplWithTemplates = append(tmplWithTemplates, getTemplates()...)
 				templates[normalisedPath] = template.Must(template.ParseFiles(tmplWithTemplates...))
 			}
 
@@ -77,16 +77,19 @@ func cacheTemplates() map[string]*template.Template {
 }
 
 func getTemplates() []string {
-  file, err := os.Open("views/templates/")
-  if err != nil { panic(err) }
+	file, err := os.Open("views/templates/")
+	if err != nil {
+		panic(err)
+	}
 
-  templates, err := file.Readdirnames(-1)
-  if err != nil { panic(err) }
+	templates, err := file.Readdirnames(-1)
+	if err != nil {
+		panic(err)
+	}
 
-  var templatesWithPath []string
-  for _, path := range templates {
-    templatesWithPath = append(templatesWithPath, fmt.Sprintf("views/templates/%s", path))
-  }
-  return templatesWithPath
+	var templatesWithPath []string
+	for _, path := range templates {
+		templatesWithPath = append(templatesWithPath, fmt.Sprintf("views/templates/%s", path))
+	}
+	return templatesWithPath
 }
-
