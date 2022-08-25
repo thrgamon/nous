@@ -79,16 +79,17 @@ func (rr NoteRepo) Get(ctx context.Context, id NoteID) (Note, error) {
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      note_search.id,
+      notes.id,
       body,
       tags,
       done,
       inserted_at,
       'Unprioritised'
     FROM
-      note_search
+      notes
+      join note_search on notes.id = note_search.id
     WHERE
-      note_search.id = $1;`,
+      notes.id = $1;`,
 		id,
 	)
 
@@ -117,32 +118,34 @@ func (rr NoteRepo) GetByPriority(ctx context.Context) ([]Note, error) {
 	var notes []Note
 	rows, err := rr.db.Query(
 		ctx,
-		`WITH priority_tags AS (
-	SELECT
-		tag AS tags
-	FROM
-		tags
-	WHERE
-		TYPE = $1
-)
+		`WITH priority_tags AS (SELECT tag FROM tags WHERE TYPE = $1)
 SELECT
-	note_search.id,
-  body, 
-  tags, 
-  done,
-  inserted_at,
-  (
+	notes.id,
+	body,
+	tags,
+	done,
+	inserted_at,
+	(
 		SELECT
-			COALESCE((
+			coalesce((
 				SELECT
-					* FROM priority_tags
-				INTERSECT
-				SELECT
-					unnest(note_search.tags)), 'Unprioritised'))
-	FROM
-		note_search
-	WHERE
-  ARRAY ['todo', (select context from contexts where active = true)::text] <@ tags::text[] AND done=false`,
+					*
+				FROM priority_tags
+			INTERSECT
+			SELECT
+				unnest(tags)), 'Unprioritised'))
+FROM
+	notes
+	JOIN note_search ON notes.id = note_search.id
+WHERE
+	ARRAY['todo', (
+		SELECT
+			context
+		FROM
+			contexts
+		WHERE
+			active = TRUE)::text] <@ tags::text[]
+	AND done = FALSE`,
 		TaskPriority,
 	)
 
@@ -160,18 +163,19 @@ func (rr NoteRepo) GetByTags(ctx context.Context, tags string) ([]Note, error) {
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      note_search.id,
+      notes.id,
       body,
       tags,
       done,
       inserted_at,
       'Unprioritised'
     FROM
-      note_search
+      notes
+	    JOIN note_search ON notes.id = note_search.id
   	WHERE
     string_to_array($1, ',') <@ tags::text[] AND done=false
     ORDER BY
-      note_search.id DESC`,
+      notes.id DESC`,
 		tags,
 	)
 
@@ -245,18 +249,19 @@ func (rr NoteRepo) GetForReview(ctx context.Context) ([]Note, error) {
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      note_search.id,
+      notes.id,
       body,
       tags,
       done,
-      note_search.inserted_at,
+      notes.inserted_at,
       'Unprioritised'
     FROM
-      note_search
+      notes
+	JOIN note_search ON notes.id = note_search.id
     WHERE
       reviewed_at IS NULL
     ORDER BY
-      note_search.id DESC`,
+      notes.id DESC`,
 	)
 	defer rows.Close()
 
@@ -272,18 +277,19 @@ func (rr NoteRepo) GetAllBetween(ctx context.Context, from time.Time, to time.Ti
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      note_search.id,
+      notes.id,
       body,
       tags,
       done,
       inserted_at,
       'Unprioritised'
     FROM
-      note_search
+      notes
+	JOIN note_search ON notes.id = note_search.id
     WHERE
       inserted_at BETWEEN $1 AND $2
     ORDER BY
-      note_search.id DESC`,
+      notes.id DESC`,
 		from,
 		to,
 	)
@@ -438,18 +444,19 @@ func (rr NoteRepo) GetTodos(ctx context.Context) ([]Note, error) {
 	rows, err := rr.db.Query(
 		ctx,
 		`SELECT
-      note_search.id,
+      notes.id,
       body,
       tags,
       done,
       inserted_at,
       'Unprioritised'
     FROM
-      note_search
+      notes
+	JOIN note_search ON notes.id = note_search.id
   	WHERE
   		('todo' = ANY(tags) OR body LIKE '%- [ ]%') AND done=false
     ORDER BY
-      note_search.id DESC`,
+      notes.id DESC`,
 	)
 	defer rows.Close()
 
@@ -479,14 +486,15 @@ func (rr NoteRepo) Search(ctx context.Context, searchQuery string) ([]Note, erro
   'Unprioritised'
 FROM (
 	SELECT
-		note_search.id AS id,
+		notes.id AS id,
 		body,
 		tags,
 		done,
 		inserted_at,
 		ts_rank(note_search.doc, to_tsquery($1)) AS rank
 	FROM
-		note_search
+		notes
+	JOIN note_search ON notes.id = note_search.id
 	WHERE
 		note_search.doc @@ to_tsquery($1) AND done = false
 	ORDER BY
