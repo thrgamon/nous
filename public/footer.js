@@ -11,14 +11,3 @@ function hydrateCheckboxes() {
 hydrateCheckboxes()
 
 document.addEventListener("htmx:afterSettle", hydrateCheckboxes)
-
-document.querySelector("#editor").addEventListener("keydown", (event) => {
-if ((event.keyCode == 10 || event.keyCode == 13) && event.metaKey) {
-  const form = event.target.closest('form')
-  const formTrigger = form.querySelector("button.submit");
-  const submitEvent = new SubmitEvent("submit", { submitter: formTrigger });
-  form.dispatchEvent(submitEvent);
-}
-})
-
-
