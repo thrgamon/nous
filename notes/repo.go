@@ -316,7 +316,7 @@ func (rr NoteRepo) MarkReviewed(ctx context.Context, noteId NoteID) error {
 
 func (rr NoteRepo) Delete(ctx context.Context, noteId NoteID) error {
 	error := rr.withTransaction(ctx, func() error {
-		_, err := rr.db.Exec(ctx, "DELETE FROM tags WHERE note_id = $1", noteId)
+		_, err := rr.db.Exec(ctx, "DELETE FROM notetags WHERE note_id = $1", noteId)
 		if err != nil {
 			rr.logger.Println(err.Error())
 			return err
