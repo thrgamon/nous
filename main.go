@@ -18,9 +18,11 @@ import (
 	"github.com/thrgamon/nous/notes"
 	"github.com/thrgamon/nous/templates"
 	"github.com/thrgamon/nous/web"
+	"github.com/thrgamon/nous/api"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+
 )
 
 func init() {
@@ -73,6 +75,8 @@ func main() {
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/todo/{todoIndex:[0-9]+}", notes.ToggleTodoHandler).Methods("PUT")
 	authedRouter.HandleFunc("/todos", TodoHandler).Methods("GET")
 	authedRouter.HandleFunc("/api/readings", ApiReadingHandler).Methods("GET")
+	authedRouter.HandleFunc("/api/notes", api.AllNotes).Methods("GET")
+	authedRouter.HandleFunc("/api/note", api.CreateNote).Methods("POST")
 
 	authedRouter.HandleFunc("/api/notes", api.AllNotes).Methods("GET")
 	authedRouter.HandleFunc("/api/note", api.CreateNote).Methods("POST")

@@ -8,6 +8,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	"net/http"
+	"os"
 )
 
 type Note struct {
