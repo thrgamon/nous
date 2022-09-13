@@ -5,6 +5,7 @@
 *.so
 *.dylib
 /node_modules/
+/public/build/
 
 # Test binary, built with `go test -c`
 *.test
@@ -23,3 +24,4 @@ public/build/
 .private.pub
 procfile
 *.sql
+.vscode

@@ -55,6 +55,7 @@ func main() {
 	authedRouter.Use(web.EnsureAuthed)
 
 	authedRouter.HandleFunc("/", HomeHandler)
+	authedRouter.HandleFunc("/v2", V2Handler)
 	authedRouter.HandleFunc("/t/{date}", HomeHandler)
 	authedRouter.HandleFunc("/review", ReviewHandler)
 	authedRouter.HandleFunc("/search", SearchHandler)
@@ -102,6 +103,10 @@ type PageData struct {
 	NextDay     string
 	CurrentDay  string
 	Context     string
+}
+
+func V2Handler(w http.ResponseWriter, r *http.Request) {
+  http.ServeFile(w, r, "views/v2.html")
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
