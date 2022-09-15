@@ -18,11 +18,9 @@ import (
 	"github.com/thrgamon/nous/notes"
 	"github.com/thrgamon/nous/templates"
 	"github.com/thrgamon/nous/web"
-	"github.com/thrgamon/nous/api"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-
 )
 
 func init() {
@@ -106,7 +104,7 @@ type PageData struct {
 }
 
 func V2Handler(w http.ResponseWriter, r *http.Request) {
-  http.ServeFile(w, r, "views/v2.html")
+	http.ServeFile(w, r, "views/v2.html")
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {

@@ -2,9 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"net/http"
-	"os"
-
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
