@@ -1,7 +1,7 @@
-.App {
-  text-align: center;
+.notes {
+  max-width: 600px;
+  margin: auto;
 }
-
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -36,3 +36,9 @@
     transform: rotate(360deg);
   }
 }
+
+.excalidraw-wrapper {
+  height: 95vh;
+  width: 95vw;
+  margin: auto;
+  }

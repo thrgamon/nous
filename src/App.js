@@ -1,16 +1,22 @@
 import './App.css';
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { RenderedNote } from "./Note.js"
-import MDEditor from '@uiw/react-md-editor';
+import Scali  from "./Scali.js"
+import ConfiguredCodeMirror  from "./ConfiguredCodeMirror.js"
 
 function App() {
+  const [mode, setMode] = useState(0)
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [value, setValue] = useState("");
 
   useEffect(() => {
-    fetch(`/api/notes`)
+    const params = new URLSearchParams({
+    from: "2022-07-01",
+    to: "2022-08-01",
+});
+    fetch('/api/notes'+"?"+params)
       .then((response) => {
         if (!response.ok) {
           throw new Error(
@@ -26,9 +32,13 @@ function App() {
       .finally(setLoading(false))
   }, []);
 
+const onChange = useCallback((value, viewUpdate) => {
+    setValue(value)
+  }, []);
+
   const handleKeyDown = (e) => {
     if (e.metaKey && (e.keyCode == 10 || e.keyCode == 13)) {
-      createNewNote({body: e.target.value, tags: ['hello']})
+      createNewNote({ body: value, tags: ['hello'] })
     }
   }
 
@@ -50,14 +60,12 @@ function App() {
       })
   }
 
+  const notesView = () => {
   return (
-    <div>
-      <MDEditor
-        onKeyDown={handleKeyDown}
-        value={value}
-        onChange={setValue}
-        autoFocus
-      />
+    <div className="notes" data-color-mode="light">
+      <div onKeyDown={handleKeyDown}>
+      <ConfiguredCodeMirror value={value} onChange={onChange} />
+    </div>
       <div>
         {loading && <div>A moment please...</div>}
         {error && (
@@ -74,6 +82,28 @@ function App() {
             </div>
           ))}
       </ul>
+    </div>
+  );
+  }
+
+  const scaliView = () => {
+    return <Scali />
+  }
+
+  const renderMode = () => {
+    if (mode===0) {
+      return notesView()
+    } else {
+      return scaliView()
+    }
+  }
+
+  return (
+    <div>
+      <button
+    onClick={() => setMode(mode === 0 ? 1 : 0)}
+    >SwitchMode</button>
+    {renderMode()}
     </div>
   );
 }
