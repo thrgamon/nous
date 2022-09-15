@@ -76,9 +76,8 @@ const onChange = useCallback((value, viewUpdate) => {
       <ul>
         {data &&
           data.map((note) => (
-            <div key={note.id}>
-              <RenderedNote body={note.body} />
-              <hr />
+            <div className="note" key={note.id}>
+              <RenderedNote note={note} />
             </div>
           ))}
       </ul>
