@@ -6,7 +6,7 @@ import remarkBreaks from 'remark-breaks'
 
 function Note({ note }) {
   return (
-    <div className="note" key={note.id}>
+    <div className="note prose" key={note.id}>
       <ReactMarkdown children={note.body} remarkPlugins={[remarkGfm, remarkBreaks]} />
       <div className="tags">
         {note.tags.map(tag => <span>{tag}</span>)}
