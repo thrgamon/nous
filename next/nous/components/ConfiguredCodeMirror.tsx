@@ -18,3 +18,4 @@ const ConfiguredCodeMirror = ({value, onChange}) => {
 };
 
 export default ConfiguredCodeMirror;
+

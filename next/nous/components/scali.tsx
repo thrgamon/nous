@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
-const DynamicComponentWithNoSSR = dynamic(
-() => import('../components/hello3'),
-{ ssr: false }
-)
 
 function Scali() {
   const excalidrawRef = useRef(null);
@@ -87,24 +83,20 @@ function Scali() {
   }
 
   return (
-    <div>
-        <div className="excalidraw-wrapper">
-          <Excalidraw
-            ref={excalidrawRef}
-            initialData={initialData}
-            onChange={(elements, state) =>
-              console.log("Elements :", elements, "State : ", state)
-            }
-            onPointerUpdate={(payload) => console.log(payload)}
-            onCollabButtonClick={() =>
-              window.alert("You clicked on collab button")
-            }
-            viewModeEnabled={viewModeEnabled}
-            zenModeEnabled={zenModeEnabled}
-            gridModeEnabled={gridModeEnabled}
-          />
-        </div>
-    </div>
+    <Excalidraw
+      ref={excalidrawRef}
+      initialData={initialData}
+      onChange={(elements, state) =>
+        console.log("Elements :", elements, "State : ", state)
+      }
+      onPointerUpdate={(payload) => console.log(payload)}
+      onCollabButtonClick={() =>
+        window.alert("You clicked on collab button")
+      }
+      viewModeEnabled={viewModeEnabled}
+      zenModeEnabled={zenModeEnabled}
+      gridModeEnabled={gridModeEnabled}
+    />
   );
 }
 

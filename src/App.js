@@ -1,5 +1,5 @@
 import './App.css';
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { RenderedNote } from "./Note.js"
 import Scali  from "./Scali.js"
 import ConfiguredCodeMirror  from "./ConfiguredCodeMirror.js"
