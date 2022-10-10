@@ -17,29 +17,15 @@
     <meta property="og:description" content="A simple site for finding the best learning notes.">
     <!-- <meta property="og:image" content="image.png"> -->
 
-    <link rel="stylesheet" href="/public/water.css">
-    <link rel="stylesheet" href="/public/main.css">
-	  <!-- <link rel='stylesheet' href='/public/build/bundle.css'> -->
+    <!-- <link rel="stylesheet" href="/public/water.css"> -->
+    <!-- <link rel="stylesheet" href="/public/main.css"> -->
+	<link rel='stylesheet' href='public/global.css'>
+	<link rel='stylesheet' href='public/build/bundle.css'>
 
-	  <!-- <script defer src='/public/build/bundle.js'></script> -->
+	<script defer src='public/build/bundle.js'></script>
     <script src="/public/htmx.min.js"></script>
     <link rel="apple-touch-icon" sizes="180x180" href="/public/favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/public/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/public/favicon/favicon-16x16.png">
 </head> 
-<body>
-  <header>
-    <div class='top-row'>
-      <h1><a href="/">Nous</a> <sup hx-trigger="load" hx-get="/active-context" hx-swap="innerHTML"></sup></h1>
-      <form class='search-form' action="/search" method="get">
-        <input type="text" name="query" required placeholder="search">
-        <input type="submit" value="Search">
-      </form>
-  </div>
-    <nav>
-      <a href="/todos">Todos</a>
-      <a href="/tag?tags=to read">Readings</a>
-      <a href="/review">Review</a>
-    </nav>
-  </header>
 {{ end }}

@@ -1,17 +1,2 @@
 {{template "header" .}}
-<div class="prev-next">
-  <a href="/t/{{.PreviousDay}}">&larr;</a>
-  <h2>{{.CurrentDay}}</h2>
-  <a href="/t/{{.NextDay}}">&rarr;</a>
-</div>
-{{template "editor" . }}
-  <div class="grid-note">
-  {{ range .Notes }}
-  {{ template "note" . }}
-  {{end}}
-  </div>
-<div class="prev-next">
-  <a href="/t/{{.PreviousDay}}">&larr;</a>
-  <a href="/t/{{.NextDay}}">&rarr;</a>
-</div>
 {{template "footer" .}}
