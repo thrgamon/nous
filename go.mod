@@ -10,6 +10,8 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/jackc/pgx/v4 v4.16.1
+	github.com/jmoiron/sqlx v1.3.5
+	github.com/lib/pq v1.10.2
 	github.com/stretchr/testify v1.7.0
 	github.com/thrgamon/go-utils v0.1.3
 	github.com/yuin/goldmark v1.4.13

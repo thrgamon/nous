@@ -9,6 +9,7 @@ import (
 	"github.com/thrgamon/go-utils/env"
 	urepo "github.com/thrgamon/go-utils/repo/user"
 	"github.com/thrgamon/go-utils/web/authentication"
+	"github.com/thrgamon/nous/api"
 	"github.com/thrgamon/nous/contexts"
 	"github.com/thrgamon/nous/database"
 	"github.com/thrgamon/nous/environment"
@@ -72,6 +73,10 @@ func main() {
 	authedRouter.HandleFunc("/note/{id:[0-9]+}/todo/{todoIndex:[0-9]+}", notes.ToggleTodoHandler).Methods("PUT")
 	authedRouter.HandleFunc("/todos", TodoHandler).Methods("GET")
 	authedRouter.HandleFunc("/api/readings", ApiReadingHandler).Methods("GET")
+
+	authedRouter.HandleFunc("/api/notes", api.AllNotes).Methods("GET")
+	authedRouter.HandleFunc("/api/note", api.CreateNote).Methods("POST")
+	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", api.DeleteNote).Methods("DELETE")
 
 	authedRouter.PathPrefix("/public/").HandlerFunc(web.ServeResources)
 
