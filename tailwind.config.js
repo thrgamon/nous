@@ -1,4 +1,3 @@
-const production = !process.env.ROLLUP_WATCH;
 module.exports = {
   future: {
     purgeLayersByDefault: true,
@@ -8,10 +7,7 @@ module.exports = {
 require('@tailwindcss/typography'),
 require('@tailwindcss/forms')
   ],
-  purge: {
-    content: [
-     "./src/App.svelte",
-    ],
-    enabled: production // disable purge in dev
-  },
+  content: [
+   "./src/App.svelte",
+  ],
 };

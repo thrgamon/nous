@@ -6,8 +6,7 @@
     "watch:tailwind": "postcss public/tailwind.css -o public/global.css -w",
     "build:tailwind": "cross-env NODE_ENV=production postcss public/tailwind.css -o public/global.css",
     "build": "rollup -c --environment NODE_ENV:production",
-    "dev": "rollup -c -w",
-    "start": "sirv public --no-clear"
+    "dev": "rollup -c -w"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^17.0.0",
@@ -19,17 +18,23 @@
     "rollup": "^2.3.4",
     "rollup-plugin-css-only": "^3.1.0",
     "rollup-plugin-livereload": "^2.0.0",
+    "rollup-plugin-scss": "^3.0.0",
     "rollup-plugin-svelte": "^7.0.0",
     "rollup-plugin-terser": "^7.0.0",
+    "sass": "^1.55.0",
     "svelte": "^3.0.0",
-    "svelte-preprocess": "^4.10.7"
+    "tailwindcss": "^3.1.8",
+    "svelte-preprocess": "^4.10.7",
+    "postcss-load-config": "^4.0.1",
+    "autoprefixer": "^10.4.12"
   },
   "dependencies": {
-    "autoprefixer": "^10.4.12",
+    "@tiptap/core": "^2.0.0-beta.199",
+    "@tiptap/extension-bullet-list": "^2.0.0-beta.199",
+    "@tiptap/extension-task-item": "^2.0.0-beta.199",
+    "@tiptap/extension-task-list": "^2.0.0-beta.199",
+    "@tiptap/starter-kit": "^2.0.0-beta.199",
     "cross-env": "^7.0.3",
-    "marked": "^4.1.1",
-    "postcss-load-config": "^4.0.1",
-    "sirv-cli": "^2.0.0",
-    "tailwindcss": "^3.1.8"
+    "marked": "^4.1.1"
   }
 }
