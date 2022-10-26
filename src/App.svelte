@@ -9,10 +9,11 @@
   fetchNotes();
 
   function fetchNotes() {
-    fetch("/api/notes?from=2022-10-25&to=2022-10-27").then(
+    fetch("/api/notes?from=2022-01-25&to=2022-10-01").then(
       (res) => (notes = res.json())
     );
   }
+
 </script>
 
 <main class="mx-auto max-w-lg">

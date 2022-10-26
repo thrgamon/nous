@@ -6,6 +6,10 @@ import { terser } from 'rollup-plugin-terser';
 import postcss from 'rollup-plugin-postcss'
 import autoprefixer from 'autoprefixer'
 import tailwindcss from 'tailwindcss'
+import json from '@rollup/plugin-json'
+import nodePolyfills from 'rollup-plugin-polyfill-node';
+import typescript from '@rollup/plugin-typescript';
+import autoPreprocess from 'svelte-preprocess';
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -19,11 +23,13 @@ export default {
   },
   plugins: [
     svelte({
+      preprocess: autoPreprocess(),
       compilerOptions: {
         // enable run-time checks when not in production
         dev: !production
       },
     }),
+    typescript({ sourceMap: !production }),
     // we'll extract any component CSS out into
     // a separate file - better for performance
     postcss({
@@ -44,6 +50,9 @@ export default {
       })],
     }),
 
+    nodePolyfills(),
+    typescript(),
+
     // If you have external dependencies installed from
     // npm, you'll most likely need these plugins. In
     // some cases you'll need additional configuration -
@@ -54,6 +63,7 @@ export default {
       dedupe: ['svelte']
     }),
     commonjs(),
+    json(),
 
     // Watch the `public` directory and refresh the
     // browser on changes when not in production
