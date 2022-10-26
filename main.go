@@ -78,10 +78,7 @@ func main() {
 	authedRouter.HandleFunc("/api/notes", api.AllNotes).Methods("GET")
 	authedRouter.HandleFunc("/api/note", api.CreateNote).Methods("POST")
 	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", api.DeleteNote).Methods("DELETE")
-
-	authedRouter.HandleFunc("/api/notes", api.AllNotes).Methods("GET")
-	authedRouter.HandleFunc("/api/note", api.CreateNote).Methods("POST")
-	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", api.DeleteNote).Methods("DELETE")
+	authedRouter.HandleFunc("/api/note/{id:[0-9]+}", api.EditNote).Methods("PUT")
 
 	authedRouter.PathPrefix("/public/").HandlerFunc(web.ServeResources)
 
